@@ -10,6 +10,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hoaitran.shortlink.dto.response.LinkStatsResponse;
+import com.hoaitran.shortlink.exception.ResourceNotFoundException;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -35,5 +39,23 @@ public class AnalyticsService {
                     .build();
             clickLogRepository.save(clickLog);
         });
+    }
+
+    @Transactional(readOnly = true)
+    public LinkStatsResponse getLinkStats(String shortCode) {
+        UrlLink urlLink = urlLinkRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Short URL not found: " + shortCode));
+        
+        List<ClickLog> clicks = clickLogRepository.findByUrlLinkShortCode(shortCode);
+        
+        return LinkStatsResponse.builder()
+                .link(urlLink)
+                .recentClicks(clicks)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<UrlLink> getTopLinks() {
+        return urlLinkRepository.findTop10ByOrderByClickCountDesc();
     }
 }

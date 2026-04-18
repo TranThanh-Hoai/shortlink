@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ClickLogRepository extends JpaRepository<ClickLog, Long> {
+    java.util.List<ClickLog> findByUrlLinkShortCode(String shortCode);
 }

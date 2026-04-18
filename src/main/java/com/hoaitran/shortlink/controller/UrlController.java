@@ -2,6 +2,7 @@ package com.hoaitran.shortlink.controller;
 
 import com.hoaitran.shortlink.dto.request.ShortenRequest;
 import com.hoaitran.shortlink.dto.response.ApiResponse;
+import com.hoaitran.shortlink.dto.response.LinkStatsResponse;
 import com.hoaitran.shortlink.dto.response.ShortenResponse;
 import com.hoaitran.shortlink.entity.UrlLink;
 import com.hoaitran.shortlink.service.AnalyticsService;
@@ -72,6 +73,34 @@ public class UrlController {
                 .message("URL status updated successfully")
                 .path(servletRequest.getRequestURI())
                 .data(urlLink)
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/{shortCode}/stats")
+    public ResponseEntity<ApiResponse<LinkStatsResponse>> getStats(
+            @PathVariable String shortCode,
+            HttpServletRequest servletRequest) {
+        LinkStatsResponse stats = analyticsService.getLinkStats(shortCode);
+        ApiResponse<LinkStatsResponse> response = ApiResponse.<LinkStatsResponse>builder()
+                .timestamp(java.time.LocalDateTime.now())
+                .code(HttpStatus.OK.value())
+                .message("Stats retrieved successfully")
+                .path(servletRequest.getRequestURI())
+                .data(stats)
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/top")
+    public ResponseEntity<ApiResponse<java.util.List<UrlLink>>> getTopLinks(HttpServletRequest servletRequest) {
+        java.util.List<UrlLink> topLinks = analyticsService.getTopLinks();
+        ApiResponse<java.util.List<UrlLink>> response = ApiResponse.<java.util.List<UrlLink>>builder()
+                .timestamp(java.time.LocalDateTime.now())
+                .code(HttpStatus.OK.value())
+                .message("Top links retrieved successfully")
+                .path(servletRequest.getRequestURI())
+                .data(topLinks)
                 .build();
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

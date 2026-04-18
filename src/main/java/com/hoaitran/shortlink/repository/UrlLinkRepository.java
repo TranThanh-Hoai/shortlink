@@ -19,4 +19,6 @@ public interface UrlLinkRepository extends JpaRepository<UrlLink, Long> {
     @Transactional
     @Query("UPDATE UrlLink u SET u.clickCount = u.clickCount + 1 WHERE u.shortCode = :shortCode")
     void incrementClickCount(String shortCode);
+
+    java.util.List<UrlLink> findTop10ByOrderByClickCountDesc();
 }
