@@ -6,6 +6,7 @@ import com.hoaitran.shortlink.dto.response.LinkStatsResponse;
 import com.hoaitran.shortlink.dto.response.ShortenResponse;
 import com.hoaitran.shortlink.entity.UrlLink;
 import com.hoaitran.shortlink.service.AnalyticsService;
+import com.hoaitran.shortlink.service.QrCodeService;
 import com.hoaitran.shortlink.service.UrlShortenerService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -21,6 +22,7 @@ import org.springframework.web.servlet.view.RedirectView;
 public class UrlController {
     private final UrlShortenerService urlShortenerService;
     private final AnalyticsService analyticsService;
+    private final QrCodeService qrCodeService;
 
     @PostMapping("/shorten")
     public ResponseEntity<ApiResponse<ShortenResponse>> shortenUrl(@Valid @RequestBody ShortenRequest request,
@@ -103,5 +105,15 @@ public class UrlController {
                 .data(topLinks)
                 .build();
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/{shortCode}/qr", produces = org.springframework.http.MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<byte[]> getQrCode(@PathVariable String shortCode, HttpServletRequest servletRequest) {
+        // We need the full short URL to encode in QR
+        String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
+        String shortUrl = baseUrl + "/r/" + shortCode;
+        
+        byte[] qrImage = qrCodeService.generateQrCode(shortUrl, 300, 300);
+        return ResponseEntity.ok(qrImage);
     }
 }
