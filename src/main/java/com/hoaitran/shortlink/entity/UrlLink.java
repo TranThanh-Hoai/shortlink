@@ -32,4 +32,7 @@ public class UrlLink {
 
     @Builder.Default
     private boolean isActive = true;
+
+    @Builder.Default
+    private long clickCount = 0;
 }

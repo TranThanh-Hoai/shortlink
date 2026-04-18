@@ -3,6 +3,7 @@ package com.hoaitran.shortlink.controller;
 import com.hoaitran.shortlink.dto.request.ShortenRequest;
 import com.hoaitran.shortlink.dto.response.ShortenResponse;
 import com.hoaitran.shortlink.entity.UrlLink;
+import com.hoaitran.shortlink.service.AnalyticsService;
 import com.hoaitran.shortlink.service.UrlShortenerService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -17,6 +18,7 @@ import org.springframework.web.servlet.view.RedirectView;
 @RequiredArgsConstructor
 public class UrlController {
     private final UrlShortenerService urlShortenerService;
+    private final AnalyticsService analyticsService;
 
     @PostMapping("/shorten")
     public ResponseEntity<ShortenResponse> shortenUrl(@Valid @RequestBody ShortenRequest request,
@@ -37,8 +39,16 @@ public class UrlController {
     }
 
     @GetMapping("/{shortCode}")
-    public RedirectView redirect(@PathVariable String shortCode) {
+    public RedirectView redirect(@PathVariable String shortCode, HttpServletRequest request) {
         String originalUrl = urlShortenerService.getOriginalUrl(shortCode);
+
+        // Record click asynchronously
+        analyticsService.recordClick(
+                shortCode,
+                request.getRemoteAddr(),
+                request.getHeader("User-Agent"),
+                request.getHeader("Referer"));
+
         return new RedirectView(originalUrl);
     }
 }
