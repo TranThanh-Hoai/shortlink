@@ -1,6 +1,7 @@
 package com.hoaitran.shortlink.exception;
 
 import com.hoaitran.shortlink.dto.response.ApiResponse;
+import com.hoaitran.shortlink.dto.response.ApiResponseFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -12,7 +13,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -20,17 +20,17 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     private ResponseEntity<ApiResponse<Object>> buildErrorResponse(Exception ex, HttpStatus status, HttpServletRequest request, String message) {
-        ApiResponse<Object> response = ApiResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .code(status.value())
-                .message(message)
-                .path(request.getRequestURI())
-                .build();
+        ApiResponse<Object> response = ApiResponseFactory.error(status, message, request);
         return new ResponseEntity<>(response, status);
     }
 
     @ExceptionHandler(AliasAlreadyExistsException.class)
     public ResponseEntity<ApiResponse<Object>> handleAliasAlreadyExists(AliasAlreadyExistsException ex, HttpServletRequest request) {
+        return buildErrorResponse(ex, HttpStatus.CONFLICT, request, ex.getMessage());
+    }
+
+    @ExceptionHandler(IdempotencyConflictException.class)
+    public ResponseEntity<ApiResponse<Object>> handleIdempotencyConflict(IdempotencyConflictException ex, HttpServletRequest request) {
         return buildErrorResponse(ex, HttpStatus.CONFLICT, request, ex.getMessage());
     }
 

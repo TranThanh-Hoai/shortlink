@@ -2,6 +2,7 @@ package com.hoaitran.shortlink.controller;
 
 import com.hoaitran.shortlink.dto.request.ShortenRequest;
 import com.hoaitran.shortlink.dto.response.ApiResponse;
+import com.hoaitran.shortlink.dto.response.ApiResponseFactory;
 import com.hoaitran.shortlink.dto.response.LinkStatsResponse;
 import com.hoaitran.shortlink.dto.response.ShortenResponse;
 import com.hoaitran.shortlink.entity.UrlLink;
@@ -26,6 +27,7 @@ public class UrlController {
 
     @PostMapping("/shorten")
     public ResponseEntity<ApiResponse<ShortenResponse>> shortenUrl(@Valid @RequestBody ShortenRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             HttpServletRequest servletRequest) {
         // Anti-abuse: check if original URL is the same domain to prevent loops
         String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
@@ -33,7 +35,7 @@ public class UrlController {
             throw new IllegalArgumentException("Cannot shorten URLs from the same domain");
         }
 
-        UrlLink urlLink = urlShortenerService.shortenUrl(request);
+        UrlLink urlLink = urlShortenerService.shortenUrl(request, idempotencyKey);
 
         // Construct short URL using a dedicated public path /r/ instead of the API path
         String shortUrl = baseUrl + "/r/" + urlLink.getShortCode();
@@ -45,13 +47,11 @@ public class UrlController {
                 .createdAt(urlLink.getCreatedAt())
                 .build();
 
-        ApiResponse<ShortenResponse> response = ApiResponse.<ShortenResponse>builder()
-                .timestamp(java.time.LocalDateTime.now())
-                .code(HttpStatus.CREATED.value())
-                .message("URL shortened successfully")
-                .path(servletRequest.getRequestURI())
-                .data(shortenData)
-                .build();
+        ApiResponse<ShortenResponse> response = ApiResponseFactory.success(
+                HttpStatus.CREATED,
+                "URL shortened successfully",
+                servletRequest,
+                shortenData);
 
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
@@ -59,12 +59,11 @@ public class UrlController {
     @DeleteMapping("/{shortCode}")
     public ResponseEntity<ApiResponse<Void>> deleteUrl(@PathVariable String shortCode, HttpServletRequest servletRequest) {
         urlShortenerService.deleteUrl(shortCode);
-        ApiResponse<Void> response = ApiResponse.<Void>builder()
-                .timestamp(java.time.LocalDateTime.now())
-                .code(HttpStatus.NO_CONTENT.value())
-                .message("URL deleted successfully")
-                .path(servletRequest.getRequestURI())
-                .build();
+        ApiResponse<Void> response = ApiResponseFactory.success(
+                HttpStatus.OK,
+                "URL deleted successfully",
+                servletRequest,
+                null);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -74,13 +73,11 @@ public class UrlController {
             @RequestParam boolean active,
             HttpServletRequest servletRequest) {
         UrlLink urlLink = urlShortenerService.updateStatus(shortCode, active);
-        ApiResponse<UrlLink> response = ApiResponse.<UrlLink>builder()
-                .timestamp(java.time.LocalDateTime.now())
-                .code(HttpStatus.OK.value())
-                .message("URL status updated successfully")
-                .path(servletRequest.getRequestURI())
-                .data(urlLink)
-                .build();
+        ApiResponse<UrlLink> response = ApiResponseFactory.success(
+                HttpStatus.OK,
+                "URL status updated successfully",
+                servletRequest,
+                urlLink);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -89,26 +86,22 @@ public class UrlController {
             @PathVariable String shortCode,
             HttpServletRequest servletRequest) {
         LinkStatsResponse stats = analyticsService.getLinkStats(shortCode);
-        ApiResponse<LinkStatsResponse> response = ApiResponse.<LinkStatsResponse>builder()
-                .timestamp(java.time.LocalDateTime.now())
-                .code(HttpStatus.OK.value())
-                .message("Stats retrieved successfully")
-                .path(servletRequest.getRequestURI())
-                .data(stats)
-                .build();
+        ApiResponse<LinkStatsResponse> response = ApiResponseFactory.success(
+                HttpStatus.OK,
+                "Stats retrieved successfully",
+                servletRequest,
+                stats);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/top")
     public ResponseEntity<ApiResponse<java.util.List<UrlLink>>> getTopLinks(HttpServletRequest servletRequest) {
         java.util.List<UrlLink> topLinks = analyticsService.getTopLinks();
-        ApiResponse<java.util.List<UrlLink>> response = ApiResponse.<java.util.List<UrlLink>>builder()
-                .timestamp(java.time.LocalDateTime.now())
-                .code(HttpStatus.OK.value())
-                .message("Top links retrieved successfully")
-                .path(servletRequest.getRequestURI())
-                .data(topLinks)
-                .build();
+        ApiResponse<java.util.List<UrlLink>> response = ApiResponseFactory.success(
+                HttpStatus.OK,
+                "Top links retrieved successfully",
+                servletRequest,
+                topLinks);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

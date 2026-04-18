@@ -7,12 +7,14 @@ import com.hoaitran.shortlink.util.Base62Utils;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.hoaitran.shortlink.dto.request.ShortenRequest;
 import com.hoaitran.shortlink.exception.AliasAlreadyExistsException;
+import com.hoaitran.shortlink.exception.IdempotencyConflictException;
 
 @Service
 @RequiredArgsConstructor
@@ -21,9 +23,26 @@ public class UrlShortenerService {
     private static final int CODE_LENGTH = 7;
 
     @Transactional
-    public UrlLink shortenUrl(ShortenRequest request) {
+    public UrlLink shortenUrl(ShortenRequest request, String idempotencyKey) {
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            return urlLinkRepository.findByIdempotencyKey(idempotencyKey)
+                    .map(existingLink -> {
+                        if (matchesRequest(existingLink, request)) {
+                            return existingLink;
+                        }
+                        throw new IdempotencyConflictException(
+                                "Idempotency-Key was already used for a different shorten request");
+                    })
+                    .orElseGet(() -> createShortUrl(request, idempotencyKey));
+        }
+
+        return createShortUrl(request, null);
+    }
+
+    private UrlLink createShortUrl(ShortenRequest request, String idempotencyKey) {
         String originalUrl = request.getOriginalUrl();
         String customAlias = request.getCustomAlias();
+        LocalDateTime normalizedExpiresAt = normalizeExpiresAt(request.getExpiresAt());
 
         if (customAlias != null && !customAlias.isBlank()) {
             return urlLinkRepository.findByShortCode(customAlias)
@@ -38,7 +57,9 @@ public class UrlShortenerService {
                         UrlLink urlLink = UrlLink.builder()
                                 .originalUrl(originalUrl)
                                 .shortCode(customAlias)
-                                .expiresAt(request.getExpiresAt())
+                                .idempotencyKey(idempotencyKey)
+                                .requestedCustomAlias(customAlias)
+                                .expiresAt(normalizedExpiresAt)
                                 .build();
                         return urlLinkRepository.save(urlLink);
                     });
@@ -50,7 +71,8 @@ public class UrlShortenerService {
         
         return urlLinkRepository.findByOriginalUrl(originalUrl)
                 .filter(url -> url.getExpiresAt() == null || url.getExpiresAt().isAfter(LocalDateTime.now()))
-                .filter(url -> request.getExpiresAt() == null || (url.getExpiresAt() != null && url.getExpiresAt().equals(request.getExpiresAt())))
+                .filter(url -> normalizedExpiresAt == null
+                        || (url.getExpiresAt() != null && url.getExpiresAt().equals(normalizedExpiresAt)))
                 .orElseGet(() -> {
                     String code;
                     do {
@@ -60,11 +82,28 @@ public class UrlShortenerService {
                     UrlLink urlLink = UrlLink.builder()
                             .originalUrl(originalUrl)
                             .shortCode(code)
-                            .expiresAt(request.getExpiresAt())
+                            .idempotencyKey(idempotencyKey)
+                            .requestedCustomAlias(customAlias)
+                            .expiresAt(normalizedExpiresAt)
                             .build();
 
                     return urlLinkRepository.save(urlLink);
                 });
+    }
+
+    private boolean matchesRequest(UrlLink existingLink, ShortenRequest request) {
+        boolean sameOriginalUrl = existingLink.getOriginalUrl().equals(request.getOriginalUrl());
+        boolean sameAlias = normalizeAlias(existingLink.getRequestedCustomAlias()).equals(normalizeAlias(request.getCustomAlias()));
+        boolean sameExpiry = java.util.Objects.equals(existingLink.getExpiresAt(), normalizeExpiresAt(request.getExpiresAt()));
+        return sameOriginalUrl && sameAlias && sameExpiry;
+    }
+
+    private String normalizeAlias(String alias) {
+        return alias == null ? "" : alias.trim();
+    }
+
+    private LocalDateTime normalizeExpiresAt(LocalDateTime expiresAt) {
+        return expiresAt == null ? null : expiresAt.truncatedTo(ChronoUnit.MICROS);
     }
 
     @Transactional(readOnly = true)

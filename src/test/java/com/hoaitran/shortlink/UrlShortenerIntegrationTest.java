@@ -15,7 +15,12 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.LocalDateTime;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.*;
@@ -98,5 +103,87 @@ public class UrlShortenerIntegrationTest {
         mockMvc.perform(get("/r/" + expiredLink.getShortCode()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("expired")));
+    }
+
+    @Test
+    void testCustomAliasStatusDeleteStatsTopAndQr() throws Exception {
+        ShortenRequest request = ShortenRequest.builder()
+                .originalUrl("https://spring.io")
+                .customAlias("springdocs")
+                .expiresAt(LocalDateTime.now().plusDays(2))
+                .build();
+
+        mockMvc.perform(post("/api/v1/urls/shorten")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.shortCode", is("springdocs")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()))
+                .andExpect(jsonPath("$.code", is(201)))
+                .andExpect(jsonPath("$.path", is("/api/v1/urls/shorten")));
+
+        mockMvc.perform(patch("/api/v1/urls/springdocs/status")
+                .param("active", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.active", is(false)))
+                .andExpect(jsonPath("$.code", is(200)));
+
+        mockMvc.perform(get("/api/v1/urls/springdocs/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.link.shortCode", is("springdocs")));
+
+        mockMvc.perform(get("/api/v1/urls/top"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].shortCode", is("springdocs")));
+
+        MvcResult qrResult = mockMvc.perform(get("/api/v1/urls/springdocs/qr"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.IMAGE_PNG))
+                .andReturn();
+        assertTrue(qrResult.getResponse().getContentAsByteArray().length > 0);
+
+        mockMvc.perform(delete("/api/v1/urls/springdocs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code", is(200)))
+                .andExpect(jsonPath("$.message", is("URL deleted successfully")));
+    }
+
+    @Test
+    void testIdempotencyKeyReturnsSameLinkForSameRequestAndConflictsForDifferentRequest() throws Exception {
+        ShortenRequest request = ShortenRequest.builder()
+                .originalUrl("https://example.com/idempotent")
+                .expiresAt(LocalDateTime.now().plusHours(1))
+                .build();
+
+        MvcResult first = mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Idempotency-Key", "idem-123")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        MvcResult second = mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Idempotency-Key", "idem-123")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String firstCode = objectMapper.readTree(first.getResponse().getContentAsString()).at("/data/shortCode").asText();
+        String secondCode = objectMapper.readTree(second.getResponse().getContentAsString()).at("/data/shortCode").asText();
+        assertEquals(firstCode, secondCode);
+
+        ShortenRequest differentRequest = ShortenRequest.builder()
+                .originalUrl("https://example.com/other")
+                .build();
+
+        mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Idempotency-Key", "idem-123")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(differentRequest)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code", is(409)))
+                .andExpect(jsonPath("$.message", containsString("Idempotency-Key")));
     }
 }

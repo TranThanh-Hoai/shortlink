@@ -24,6 +24,12 @@ public class UrlLink {
     @Column(nullable = false, unique = true, length = 10)
     private String shortCode;
 
+    @Column(unique = true, length = 128)
+    private String idempotencyKey;
+
+    @Column(length = 20)
+    private String requestedCustomAlias;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface UrlLinkRepository extends JpaRepository<UrlLink, Long> {
     Optional<UrlLink> findByShortCode(String shortCode);
     Optional<UrlLink> findByOriginalUrl(String originalUrl);
+    Optional<UrlLink> findByIdempotencyKey(String idempotencyKey);
     boolean existsByShortCode(String shortCode);
 
     @Modifying

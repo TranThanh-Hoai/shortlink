@@ -46,7 +46,7 @@ public class AnalyticsIntegrationTest {
     void testClickLoggingAsynchronously() throws Exception {
         // 1. Prepare a link
         String originalUrl = "https://example.com";
-        UrlLink urlLink = urlShortenerService.shortenUrl(new ShortenRequest(originalUrl));
+        UrlLink urlLink = urlShortenerService.shortenUrl(new ShortenRequest(originalUrl), null);
         String shortCode = urlLink.getShortCode();
 
         // 2. Perform redirect
