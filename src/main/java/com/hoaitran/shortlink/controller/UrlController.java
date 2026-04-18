@@ -24,7 +24,7 @@ public class UrlController {
     @PostMapping("/shorten")
     public ResponseEntity<ApiResponse<ShortenResponse>> shortenUrl(@Valid @RequestBody ShortenRequest request,
             HttpServletRequest servletRequest) {
-        UrlLink urlLink = urlShortenerService.shortenUrl(request.getOriginalUrl());
+        UrlLink urlLink = urlShortenerService.shortenUrl(request);
 
         // Construct short URL using a dedicated public path /r/ instead of the API path
         String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");

@@ -11,6 +11,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hoaitran.shortlink.dto.request.ShortenRequest;
+import com.hoaitran.shortlink.exception.AliasAlreadyExistsException;
+
 @Service
 @RequiredArgsConstructor
 public class UrlShortenerService {
@@ -18,9 +21,29 @@ public class UrlShortenerService {
     private static final int CODE_LENGTH = 7;
 
     @Transactional
-    public UrlLink shortenUrl(String originalUrl) {
-        // De-duplication: check if URL already exists
+    public UrlLink shortenUrl(ShortenRequest request) {
+        String originalUrl = request.getOriginalUrl();
+        String customAlias = request.getCustomAlias();
+
+        if (customAlias != null && !customAlias.isBlank()) {
+            if (urlLinkRepository.existsByShortCode(customAlias)) {
+                throw new AliasAlreadyExistsException("Alias already in use: " + customAlias);
+            }
+            UrlLink urlLink = UrlLink.builder()
+                    .originalUrl(originalUrl)
+                    .shortCode(customAlias)
+                    .expiresAt(request.getExpiresAt())
+                    .build();
+            return urlLinkRepository.save(urlLink);
+        }
+
+        // De-duplication: check if URL already exists without custom alias and without expiration (simple version)
+        // If user provides expiration, we usually want a new link or update the old one? 
+        // User said "expiration theo request", usually implies this specific link.
+        
         return urlLinkRepository.findByOriginalUrl(originalUrl)
+                .filter(url -> url.getExpiresAt() == null || url.getExpiresAt().isAfter(LocalDateTime.now()))
+                .filter(url -> request.getExpiresAt() == null || (url.getExpiresAt() != null && url.getExpiresAt().equals(request.getExpiresAt())))
                 .orElseGet(() -> {
                     String code;
                     do {
@@ -30,6 +53,7 @@ public class UrlShortenerService {
                     UrlLink urlLink = UrlLink.builder()
                             .originalUrl(originalUrl)
                             .shortCode(code)
+                            .expiresAt(request.getExpiresAt())
                             .build();
 
                     return urlLinkRepository.save(urlLink);

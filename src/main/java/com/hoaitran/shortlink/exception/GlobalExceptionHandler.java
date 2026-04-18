@@ -28,6 +28,11 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, status);
     }
 
+    @ExceptionHandler(AliasAlreadyExistsException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAliasAlreadyExists(AliasAlreadyExistsException ex, HttpServletRequest request) {
+        return buildErrorResponse(ex, HttpStatus.CONFLICT, request, ex.getMessage());
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Object>> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
         return buildErrorResponse(ex, HttpStatus.NOT_FOUND, request, ex.getMessage());
