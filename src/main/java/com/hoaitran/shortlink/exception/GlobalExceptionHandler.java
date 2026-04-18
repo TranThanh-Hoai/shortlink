@@ -1,5 +1,7 @@
 package com.hoaitran.shortlink.exception;
 
+import com.hoaitran.shortlink.dto.response.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,46 +11,50 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
+    private ResponseEntity<ApiResponse<Object>> buildErrorResponse(Exception ex, HttpStatus status, HttpServletRequest request, String message) {
+        ApiResponse<Object> response = ApiResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .code(status.value())
+                .message(message)
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(response, status);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleNotFound(ResourceNotFoundException ex) {
-        Map<String, String> error = new HashMap<>();
-        error.put("error", ex.getMessage());
-        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+    public ResponseEntity<ApiResponse<Object>> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
+        return buildErrorResponse(ex, HttpStatus.NOT_FOUND, request, ex.getMessage());
     }
 
     @ExceptionHandler({NoHandlerFoundException.class, NoResourceFoundException.class})
-    public ResponseEntity<Map<String, String>> handleNoHandlerFound(Exception ex) {
-        Map<String, String> error = new HashMap<>();
+    public ResponseEntity<ApiResponse<Object>> handleNoHandlerFound(Exception ex, HttpServletRequest request) {
         String path = "";
         if (ex instanceof NoHandlerFoundException) {
             path = ((NoHandlerFoundException) ex).getRequestURL();
         } else if (ex instanceof NoResourceFoundException) {
             path = ((NoResourceFoundException) ex).getResourcePath();
         }
-        error.put("error", "The requested path does not exist: " + path);
-        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        return buildErrorResponse(ex, HttpStatus.NOT_FOUND, request, "The requested path does not exist: " + path);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error -> 
-            errors.put(error.getField(), error.getDefaultMessage()));
-        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ApiResponse<Object>> handleValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.joining(", "));
+        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request, message);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleGeneralException(Exception ex) {
-        log.error("Unhandled exception: ", ex);
-        Map<String, String> error = new HashMap<>();
-        error.put("error", "An unexpected error occurred");
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<ApiResponse<Object>> handleGeneralException(Exception ex, HttpServletRequest request) {
+        log.error("Unhandled exception at {}: ", request.getRequestURI(), ex);
+        return buildErrorResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR, request, "An unexpected error occurred");
     }
 }

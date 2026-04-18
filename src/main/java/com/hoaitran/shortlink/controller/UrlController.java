@@ -1,6 +1,7 @@
 package com.hoaitran.shortlink.controller;
 
 import com.hoaitran.shortlink.dto.request.ShortenRequest;
+import com.hoaitran.shortlink.dto.response.ApiResponse;
 import com.hoaitran.shortlink.dto.response.ShortenResponse;
 import com.hoaitran.shortlink.entity.UrlLink;
 import com.hoaitran.shortlink.service.AnalyticsService;
@@ -21,7 +22,7 @@ public class UrlController {
     private final AnalyticsService analyticsService;
 
     @PostMapping("/shorten")
-    public ResponseEntity<ShortenResponse> shortenUrl(@Valid @RequestBody ShortenRequest request,
+    public ResponseEntity<ApiResponse<ShortenResponse>> shortenUrl(@Valid @RequestBody ShortenRequest request,
             HttpServletRequest servletRequest) {
         UrlLink urlLink = urlShortenerService.shortenUrl(request.getOriginalUrl());
 
@@ -29,11 +30,19 @@ public class UrlController {
         String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
         String shortUrl = baseUrl + "/r/" + urlLink.getShortCode();
 
-        ShortenResponse response = ShortenResponse.builder()
+        ShortenResponse shortenData = ShortenResponse.builder()
                 .originalUrl(urlLink.getOriginalUrl())
                 .shortCode(urlLink.getShortCode())
                 .shortUrl(shortUrl)
                 .createdAt(urlLink.getCreatedAt())
+                .build();
+
+        ApiResponse<ShortenResponse> response = ApiResponse.<ShortenResponse>builder()
+                .timestamp(java.time.LocalDateTime.now())
+                .code(HttpStatus.CREATED.value())
+                .message("URL shortened successfully")
+                .path(servletRequest.getRequestURI())
+                .data(shortenData)
                 .build();
 
         return new ResponseEntity<>(response, HttpStatus.CREATED);
