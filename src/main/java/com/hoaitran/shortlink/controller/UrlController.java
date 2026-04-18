@@ -13,14 +13,16 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
 @RestController
+@RequestMapping("/api/v1/urls")
 @RequiredArgsConstructor
 public class UrlController {
     private final UrlShortenerService urlShortenerService;
 
-    @PostMapping("/api/v1/urls/shorten")
-    public ResponseEntity<ShortenResponse> shortenUrl(@Valid @RequestBody ShortenRequest request, HttpServletRequest servletRequest) {
+    @PostMapping("/shorten")
+    public ResponseEntity<ShortenResponse> shortenUrl(@Valid @RequestBody ShortenRequest request,
+            HttpServletRequest servletRequest) {
         UrlLink urlLink = urlShortenerService.shortenUrl(request.getOriginalUrl());
-        
+
         // Construct base URL from request
         String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
         String shortUrl = baseUrl + "/" + urlLink.getShortCode();
