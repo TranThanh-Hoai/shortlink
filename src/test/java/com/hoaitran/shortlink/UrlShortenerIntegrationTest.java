@@ -2,6 +2,7 @@ package com.hoaitran.shortlink;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hoaitran.shortlink.dto.request.ShortenRequest;
+import com.hoaitran.shortlink.entity.UrlLink;
 import com.hoaitran.shortlink.repository.UrlLinkRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
+import java.time.LocalDateTime;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -77,5 +80,19 @@ public class UrlShortenerIntegrationTest {
                 .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.originalUrl", notNullValue()));
+    }
+
+    @Test
+    void testRedirectReturnsNotFoundForExpiredLink() throws Exception {
+        UrlLink expiredLink = urlLinkRepository.save(UrlLink.builder()
+                .originalUrl("https://expired.example.com")
+                .shortCode("expired1")
+                .expiresAt(LocalDateTime.now().minusMinutes(5))
+                .isActive(true)
+                .build());
+
+        mockMvc.perform(get("/api/v1/urls/" + expiredLink.getShortCode()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error", containsString("expired")));
     }
 }

@@ -23,9 +23,8 @@ public class AnalyticsService {
         log.info("Recording click for code: {} from IP: {}", shortCode, ipAddress);
         
         urlLinkRepository.findByShortCode(shortCode).ifPresent(urlLink -> {
-            // 1. Increment total click count on the link
-            urlLink.setClickCount(urlLink.getClickCount() + 1);
-            urlLinkRepository.save(urlLink);
+            // 1. Increment total click count on the link (Atomic update)
+            urlLinkRepository.incrementClickCount(shortCode);
 
             // 2. Create detailed click log
             ClickLog clickLog = ClickLog.builder()

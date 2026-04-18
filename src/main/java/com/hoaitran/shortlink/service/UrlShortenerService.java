@@ -5,6 +5,8 @@ import com.hoaitran.shortlink.exception.ResourceNotFoundException;
 import com.hoaitran.shortlink.repository.UrlLinkRepository;
 import com.hoaitran.shortlink.util.Base62Utils;
 import lombok.RequiredArgsConstructor;
+
+import java.time.LocalDateTime;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,8 +37,8 @@ public class UrlShortenerService {
     @Cacheable(value = "urls", key = "#shortCode")
     public String getOriginalUrl(String shortCode) {
         return urlLinkRepository.findByShortCode(shortCode)
-                .filter(UrlLink::isActive)
+                .filter(url -> url.isActive() && (url.getExpiresAt() == null || url.getExpiresAt().isAfter(LocalDateTime.now())))
                 .map(UrlLink::getOriginalUrl)
-                .orElseThrow(() -> new ResourceNotFoundException("Short URL not found or inactive: " + shortCode));
+                .orElseThrow(() -> new ResourceNotFoundException("Short URL not found, inactive, or expired: " + shortCode));
     }
 }
