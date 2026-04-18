@@ -27,16 +27,11 @@ import java.util.function.Supplier;
 public class RateLimitingFilter extends OncePerRequestFilter {
 
     private final ProxyManager<byte[]> proxyManager;
+    private final BucketConfiguration bucketConfiguration;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.ratelimit.capacity:10}")
-    private int capacity;
-
-    @Value("${app.ratelimit.refill-tokens:10}")
-    private int refillTokens;
-
-    @Value("${app.ratelimit.refill-minutes:1}")
-    private int refillMinutes;
+    @Value("${app.ratelimit.trusted-proxies:}")
+    private String trustedProxies;
 
     private static final String SHORTEN_API = "/api/v1/urls/shorten";
 
@@ -50,16 +45,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             String clientIp = getClientIp(request);
             byte[] clientIpBytes = clientIp.getBytes(StandardCharsets.UTF_8);
 
-            // Cấu hình bucket cho Distributed Rate Limit
-            Supplier<BucketConfiguration> configSupplier = () -> BucketConfiguration.builder()
-                    .addLimit(Bandwidth.builder()
-                            .capacity(capacity)
-                            .refillIntervally(refillTokens, Duration.ofMinutes(refillMinutes))
-                            .build())
-                    .build();
-
-            // Lấy bucket từ Redis thông qua ProxyManager
-            Bucket bucket = proxyManager.builder().build(clientIpBytes, configSupplier);
+            // Lấy bucket từ Redis thông qua ProxyManager sử dụng config đã được cache
+            Bucket bucket = proxyManager.builder().build(clientIpBytes, bucketConfiguration);
 
             if (!bucket.tryConsume(1)) {
                 log.warn("Rate limit exceeded for IP: {}", clientIp);
@@ -80,11 +67,29 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String clientIp = request.getHeader("X-Forwarded-For");
-        if (clientIp != null && !clientIp.isEmpty()) {
-            return clientIp.split(",")[0];
+        String remoteAddr = request.getRemoteAddr();
+
+        if (trustedProxies == null || trustedProxies.isEmpty()) {
+            // Nếu không có proxy tin cậy, dùng IP trực tiếp từ request
+            return remoteAddr;
         }
-        return request.getRemoteAddr();
+
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor == null || xForwardedFor.isEmpty()) {
+            return remoteAddr;
+        }
+
+        // Kiểm tra xem remoteAddr có nằm trong danh sách trusted proxies không
+        boolean isTrusted = java.util.Arrays.stream(trustedProxies.split(","))
+                .map(String::trim)
+                .anyMatch(ip -> ip.equals(remoteAddr));
+
+        if (isTrusted) {
+            // Nếu tin cậy sender (proxy), lấy IP đầu tiên trong chuỗi forwarded
+            return xForwardedFor.split(",")[0].trim();
+        }
+
+        return remoteAddr;
     }
 
     record ErrorResponse(String error, String message) {

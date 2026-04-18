@@ -11,7 +11,17 @@ import org.springframework.context.annotation.Configuration;
 import java.time.Duration;
 
 @Configuration
+@lombok.Getter
 public class RedisRateLimitConfig {
+
+    @Value("${app.ratelimit.capacity:10}")
+    private int capacity;
+
+    @Value("${app.ratelimit.refill-tokens:10}")
+    private int refillTokens;
+
+    @Value("${app.ratelimit.refill-minutes:1}")
+    private int refillMinutes;
 
     @Value("${spring.data.redis.host:localhost}")
     private String redisHost;
@@ -30,7 +40,18 @@ public class RedisRateLimitConfig {
     @Bean
     public ProxyManager<byte[]> proxyManager(RedisClient redisClient) {
         return LettuceBasedProxyManager.builderFor(redisClient)
-                .withExpirationStrategy(io.github.bucket4j.distributed.ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofMinutes(1)))
+                .withExpirationStrategy(io.github.bucket4j.distributed.ExpirationAfterWriteStrategy
+                        .basedOnTimeForRefillingBucketUpToMax(Duration.ofMinutes(refillMinutes)))
+                .build();
+    }
+
+    @Bean
+    public io.github.bucket4j.BucketConfiguration bucketConfiguration() {
+        return io.github.bucket4j.BucketConfiguration.builder()
+                .addLimit(io.github.bucket4j.Bandwidth.builder()
+                        .capacity(capacity)
+                        .refillIntervally(refillTokens, Duration.ofMinutes(refillMinutes))
+                        .build())
                 .build();
     }
 }

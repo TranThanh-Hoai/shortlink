@@ -25,8 +25,9 @@ public class UrlController {
             HttpServletRequest servletRequest) {
         UrlLink urlLink = urlShortenerService.shortenUrl(request.getOriginalUrl());
 
-        // Construct short URL using the same base path as the controller
-        String shortUrl = servletRequest.getRequestURL().toString().replace("/shorten", "") + "/" + urlLink.getShortCode();
+        // Construct short URL using a dedicated public path /r/ instead of the API path
+        String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
+        String shortUrl = baseUrl + "/r/" + urlLink.getShortCode();
 
         ShortenResponse response = ShortenResponse.builder()
                 .originalUrl(urlLink.getOriginalUrl())
@@ -38,17 +39,4 @@ public class UrlController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    @GetMapping("/{shortCode}")
-    public RedirectView redirect(@PathVariable String shortCode, HttpServletRequest request) {
-        String originalUrl = urlShortenerService.getOriginalUrl(shortCode);
-
-        // Record click asynchronously
-        analyticsService.recordClick(
-                shortCode,
-                request.getRemoteAddr(),
-                request.getHeader("User-Agent"),
-                request.getHeader("Referer"));
-
-        return new RedirectView(originalUrl);
-    }
 }

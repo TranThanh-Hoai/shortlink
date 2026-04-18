@@ -31,7 +31,7 @@ public class GlobalExceptionHandlerIntegrationTest {
         when(urlShortenerService.getOriginalUrl("boom"))
                 .thenThrow(new RuntimeException("database password leaked"));
 
-        mockMvc.perform(get("/api/v1/urls/boom"))
+        mockMvc.perform(get("/r/boom"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error", is("An unexpected error occurred")))
                 .andExpect(jsonPath("$.error", not(containsString("database password leaked"))));

@@ -19,18 +19,21 @@ public class UrlShortenerService {
 
     @Transactional
     public UrlLink shortenUrl(String originalUrl) {
-        String code;
-        // Simple collision handling: generate until unique
-        do {
-            code = Base62Utils.generateRandomCode(CODE_LENGTH);
-        } while (urlLinkRepository.existsByShortCode(code));
+        // De-duplication: check if URL already exists
+        return urlLinkRepository.findByOriginalUrl(originalUrl)
+                .orElseGet(() -> {
+                    String code;
+                    do {
+                        code = Base62Utils.generateRandomCode(CODE_LENGTH);
+                    } while (urlLinkRepository.existsByShortCode(code));
 
-        UrlLink urlLink = UrlLink.builder()
-                .originalUrl(originalUrl)
-                .shortCode(code)
-                .build();
+                    UrlLink urlLink = UrlLink.builder()
+                            .originalUrl(originalUrl)
+                            .shortCode(code)
+                            .build();
 
-        return urlLinkRepository.save(urlLink);
+                    return urlLinkRepository.save(urlLink);
+                });
     }
 
     @Transactional(readOnly = true)

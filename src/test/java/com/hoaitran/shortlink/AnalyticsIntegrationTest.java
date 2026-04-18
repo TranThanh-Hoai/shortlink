@@ -49,7 +49,7 @@ public class AnalyticsIntegrationTest {
         String shortCode = urlLink.getShortCode();
 
         // 2. Perform redirect
-        mockMvc.perform(get("/api/v1/urls/" + shortCode)
+        mockMvc.perform(get("/r/" + shortCode)
                 .header("User-Agent", "Test-Agent")
                 .header("Referer", "https://referer.com"))
                 .andExpect(status().is3xxRedirection());

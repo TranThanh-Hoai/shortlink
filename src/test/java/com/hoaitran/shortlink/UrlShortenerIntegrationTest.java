@@ -54,19 +54,23 @@ public class UrlShortenerIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.originalUrl", is(originalUrl)))
                 .andExpect(jsonPath("$.shortCode", notNullValue()))
-                .andExpect(jsonPath("$.shortUrl", containsString("/api/v1/urls/")))
+                .andExpect(jsonPath("$.shortUrl", containsString("/r/")))
                 .andReturn();
 
         String responseBody = result.getResponse().getContentAsString();
         String shortCode = objectMapper.readTree(responseBody).get("shortCode").asText();
 
         // 2. Test Redirect API
-        mockMvc.perform(get("/api/v1/urls/" + shortCode))
+        mockMvc.perform(get("/r/" + shortCode))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", originalUrl));
 
+        // 2.1 Test Old Redirect Path returns 404
+        mockMvc.perform(get("/api/v1/urls/" + shortCode))
+                .andExpect(status().isNotFound());
+
         // 3. Test 404 for invalid code
-        mockMvc.perform(get("/api/v1/urls/invalidCode"))
+        mockMvc.perform(get("/r/invalidCode"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error", containsString("Short URL not found")));
     }
@@ -91,7 +95,7 @@ public class UrlShortenerIntegrationTest {
                 .isActive(true)
                 .build());
 
-        mockMvc.perform(get("/api/v1/urls/" + expiredLink.getShortCode()))
+        mockMvc.perform(get("/r/" + expiredLink.getShortCode()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error", containsString("expired")));
     }

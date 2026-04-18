@@ -12,6 +12,7 @@ import java.util.Optional;
 @Repository
 public interface UrlLinkRepository extends JpaRepository<UrlLink, Long> {
     Optional<UrlLink> findByShortCode(String shortCode);
+    Optional<UrlLink> findByOriginalUrl(String originalUrl);
     boolean existsByShortCode(String shortCode);
 
     @Modifying
