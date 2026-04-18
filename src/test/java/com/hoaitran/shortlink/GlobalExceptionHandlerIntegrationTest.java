@@ -33,7 +33,7 @@ public class GlobalExceptionHandlerIntegrationTest {
 
         mockMvc.perform(get("/r/boom"))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error", is("An unexpected error occurred")))
-                .andExpect(jsonPath("$.error", not(containsString("database password leaked"))));
+                .andExpect(jsonPath("$.message", is("An unexpected error occurred")))
+                .andExpect(jsonPath("$.message", not(containsString("database password leaked"))));
     }
 }

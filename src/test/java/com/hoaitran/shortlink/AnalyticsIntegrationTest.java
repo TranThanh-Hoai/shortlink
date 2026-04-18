@@ -1,6 +1,7 @@
 package com.hoaitran.shortlink;
 
 import com.hoaitran.shortlink.entity.UrlLink;
+import com.hoaitran.shortlink.dto.request.ShortenRequest;
 import com.hoaitran.shortlink.repository.ClickLogRepository;
 import com.hoaitran.shortlink.repository.UrlLinkRepository;
 import com.hoaitran.shortlink.service.UrlShortenerService;
@@ -45,7 +46,7 @@ public class AnalyticsIntegrationTest {
     void testClickLoggingAsynchronously() throws Exception {
         // 1. Prepare a link
         String originalUrl = "https://example.com";
-        UrlLink urlLink = urlShortenerService.shortenUrl(originalUrl);
+        UrlLink urlLink = urlShortenerService.shortenUrl(new ShortenRequest(originalUrl));
         String shortCode = urlLink.getShortCode();
 
         // 2. Perform redirect

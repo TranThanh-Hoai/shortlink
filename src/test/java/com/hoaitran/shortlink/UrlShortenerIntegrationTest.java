@@ -52,27 +52,27 @@ public class UrlShortenerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.originalUrl", is(originalUrl)))
-                .andExpect(jsonPath("$.shortCode", notNullValue()))
-                .andExpect(jsonPath("$.shortUrl", containsString("/r/")))
+                .andExpect(jsonPath("$.data.originalUrl", is(originalUrl)))
+                .andExpect(jsonPath("$.data.shortCode", notNullValue()))
+                .andExpect(jsonPath("$.data.shortUrl", containsString("/r/")))
                 .andReturn();
 
         String responseBody = result.getResponse().getContentAsString();
-        String shortCode = objectMapper.readTree(responseBody).get("shortCode").asText();
+        String shortCode = objectMapper.readTree(responseBody).get("data").get("shortCode").asText();
 
         // 2. Test Redirect API
         mockMvc.perform(get("/r/" + shortCode))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", originalUrl));
 
-        // 2.1 Test Old Redirect Path returns 404
+        // 2.1 Test Old Redirect Path returns 405 (Method Not Allowed) because GET is no longer supported on this path, but DELETE is.
         mockMvc.perform(get("/api/v1/urls/" + shortCode))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isMethodNotAllowed());
 
         // 3. Test 404 for invalid code
         mockMvc.perform(get("/r/invalidCode"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error", containsString("Short URL not found")));
+                .andExpect(jsonPath("$.message", containsString("Short URL not found")));
     }
 
     @Test
@@ -83,7 +83,7 @@ public class UrlShortenerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.originalUrl", notNullValue()));
+                .andExpect(jsonPath("$.message", containsString("originalUrl")));
     }
 
     @Test
@@ -97,6 +97,6 @@ public class UrlShortenerIntegrationTest {
 
         mockMvc.perform(get("/r/" + expiredLink.getShortCode()))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error", containsString("expired")));
+                .andExpect(jsonPath("$.message", containsString("expired")));
     }
 }
