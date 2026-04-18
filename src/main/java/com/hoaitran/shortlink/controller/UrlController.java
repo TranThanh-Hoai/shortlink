@@ -23,9 +23,8 @@ public class UrlController {
             HttpServletRequest servletRequest) {
         UrlLink urlLink = urlShortenerService.shortenUrl(request.getOriginalUrl());
 
-        // Construct base URL from request
-        String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
-        String shortUrl = baseUrl + "/" + urlLink.getShortCode();
+        // Construct short URL using the same base path as the controller
+        String shortUrl = servletRequest.getRequestURL().toString().replace("/shorten", "") + "/" + urlLink.getShortCode();
 
         ShortenResponse response = ShortenResponse.builder()
                 .originalUrl(urlLink.getOriginalUrl())
