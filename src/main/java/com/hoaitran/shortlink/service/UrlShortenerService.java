@@ -26,15 +26,22 @@ public class UrlShortenerService {
         String customAlias = request.getCustomAlias();
 
         if (customAlias != null && !customAlias.isBlank()) {
-            if (urlLinkRepository.existsByShortCode(customAlias)) {
-                throw new AliasAlreadyExistsException("Alias already in use: " + customAlias);
-            }
-            UrlLink urlLink = UrlLink.builder()
-                    .originalUrl(originalUrl)
-                    .shortCode(customAlias)
-                    .expiresAt(request.getExpiresAt())
-                    .build();
-            return urlLinkRepository.save(urlLink);
+            return urlLinkRepository.findByShortCode(customAlias)
+                    .map(existingLink -> {
+                        if (existingLink.getOriginalUrl().equals(originalUrl)) {
+                            return existingLink; // Idempotency
+                        } else {
+                            throw new AliasAlreadyExistsException("Alias already in use: " + customAlias);
+                        }
+                    })
+                    .orElseGet(() -> {
+                        UrlLink urlLink = UrlLink.builder()
+                                .originalUrl(originalUrl)
+                                .shortCode(customAlias)
+                                .expiresAt(request.getExpiresAt())
+                                .build();
+                        return urlLinkRepository.save(urlLink);
+                    });
         }
 
         // De-duplication: check if URL already exists without custom alias and without expiration (simple version)

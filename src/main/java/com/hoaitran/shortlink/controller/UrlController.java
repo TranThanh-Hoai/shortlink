@@ -27,6 +27,12 @@ public class UrlController {
     @PostMapping("/shorten")
     public ResponseEntity<ApiResponse<ShortenResponse>> shortenUrl(@Valid @RequestBody ShortenRequest request,
             HttpServletRequest servletRequest) {
+        // Anti-abuse: check if original URL is the same domain to prevent loops
+        String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
+        if (request.getOriginalUrl().startsWith(baseUrl)) {
+            throw new IllegalArgumentException("Cannot shorten URLs from the same domain");
+        }
+
         UrlLink urlLink = urlShortenerService.shortenUrl(request);
 
         // Construct short URL using a dedicated public path /r/ instead of the API path
