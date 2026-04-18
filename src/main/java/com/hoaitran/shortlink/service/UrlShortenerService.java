@@ -68,4 +68,19 @@ public class UrlShortenerService {
                 .map(UrlLink::getOriginalUrl)
                 .orElseThrow(() -> new ResourceNotFoundException("Short URL not found, inactive, or expired: " + shortCode));
     }
+
+    @Transactional
+    public void deleteUrl(String shortCode) {
+        UrlLink urlLink = urlLinkRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Short URL not found: " + shortCode));
+        urlLinkRepository.delete(urlLink);
+    }
+
+    @Transactional
+    public UrlLink updateStatus(String shortCode, boolean active) {
+        UrlLink urlLink = urlLinkRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Short URL not found: " + shortCode));
+        urlLink.setActive(active);
+        return urlLinkRepository.save(urlLink);
+    }
 }

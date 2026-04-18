@@ -48,4 +48,31 @@ public class UrlController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @DeleteMapping("/{shortCode}")
+    public ResponseEntity<ApiResponse<Void>> deleteUrl(@PathVariable String shortCode, HttpServletRequest servletRequest) {
+        urlShortenerService.deleteUrl(shortCode);
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .timestamp(java.time.LocalDateTime.now())
+                .code(HttpStatus.NO_CONTENT.value())
+                .message("URL deleted successfully")
+                .path(servletRequest.getRequestURI())
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PatchMapping("/{shortCode}/status")
+    public ResponseEntity<ApiResponse<UrlLink>> updateStatus(
+            @PathVariable String shortCode,
+            @RequestParam boolean active,
+            HttpServletRequest servletRequest) {
+        UrlLink urlLink = urlShortenerService.updateStatus(shortCode, active);
+        ApiResponse<UrlLink> response = ApiResponse.<UrlLink>builder()
+                .timestamp(java.time.LocalDateTime.now())
+                .code(HttpStatus.OK.value())
+                .message("URL status updated successfully")
+                .path(servletRequest.getRequestURI())
+                .data(urlLink)
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }
