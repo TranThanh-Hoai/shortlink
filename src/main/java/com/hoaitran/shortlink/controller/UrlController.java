@@ -36,7 +36,6 @@ public class UrlController {
         UrlLink urlLink = urlShortenerService.shortenUrl(request);
 
         // Construct short URL using a dedicated public path /r/ instead of the API path
-        String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
         String shortUrl = baseUrl + "/r/" + urlLink.getShortCode();
 
         ShortenResponse shortenData = ShortenResponse.builder()
