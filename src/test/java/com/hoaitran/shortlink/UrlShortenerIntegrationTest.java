@@ -28,10 +28,14 @@ public class UrlShortenerIntegrationTest {
     private UrlLinkRepository urlLinkRepository;
 
     @Autowired
+    private com.hoaitran.shortlink.repository.ClickLogRepository clickLogRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
+        clickLogRepository.deleteAll();
         urlLinkRepository.deleteAll();
     }
 
