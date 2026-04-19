@@ -10,9 +10,14 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hoaitran.shortlink.dto.response.ClickLogDTO;
 import com.hoaitran.shortlink.dto.response.LinkStatsResponse;
+import com.hoaitran.shortlink.dto.response.UrlResponseDTO;
+import com.hoaitran.shortlink.entity.User;
 import com.hoaitran.shortlink.exception.ResourceNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +25,7 @@ import java.util.List;
 public class AnalyticsService {
     private final ClickLogRepository clickLogRepository;
     private final UrlLinkRepository urlLinkRepository;
+    private final UrlShortenerService urlShortenerService;
 
     @Async("analyticsTaskExecutor")
     @Transactional
@@ -42,20 +48,51 @@ public class AnalyticsService {
     }
 
     @Transactional(readOnly = true)
-    public LinkStatsResponse getLinkStats(String shortCode) {
+    public LinkStatsResponse getLinkStats(String shortCode, User currentUser, String baseUrl) {
         UrlLink urlLink = urlLinkRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Short URL not found: " + shortCode));
         
+        // Ownership check
+        if (urlLink.getUser() == null || !urlLink.getUser().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("You do not have permission to view stats for this link");
+        }
+
         List<ClickLog> clicks = clickLogRepository.findByUrlLinkShortCode(shortCode);
         
         return LinkStatsResponse.builder()
-                .link(urlLink)
-                .recentClicks(clicks)
+                .link(urlShortenerService.mapToUrlDTO(urlLink, baseUrl))
+                .recentClicks(clicks.stream()
+                        .map(this::mapToClickLogDTO)
+                        .collect(Collectors.toList()))
                 .build();
     }
 
     @Transactional(readOnly = true)
-    public List<UrlLink> getTopLinks() {
-        return urlLinkRepository.findTop10ByOrderByClickCountDesc();
+    public List<UrlResponseDTO> getTopLinks(String baseUrl) {
+        return urlLinkRepository.findTop10ByOrderByClickCountDesc().stream()
+                .map(link -> urlShortenerService.mapToUrlDTO(link, baseUrl))
+                .collect(Collectors.toList());
+    }
+
+
+    private ClickLogDTO mapToClickLogDTO(ClickLog clickLog) {
+        return ClickLogDTO.builder()
+                .ipAddress(maskIpAddress(clickLog.getIpAddress()))
+                .userAgent(clickLog.getUserAgent())
+                .referer(clickLog.getReferer())
+                .clickedAt(clickLog.getClickedAt())
+                .build();
+    }
+
+    private String maskIpAddress(String ipAddress) {
+        if (ipAddress == null || ipAddress.isBlank()) {
+            return ipAddress;
+        }
+        if (ipAddress.contains(":")) {
+            int lastSeparator = ipAddress.lastIndexOf(':');
+            return lastSeparator > 0 ? ipAddress.substring(0, lastSeparator) + ":*" : "*";
+        }
+        int lastDot = ipAddress.lastIndexOf('.');
+        return lastDot > 0 ? ipAddress.substring(0, lastDot) + ".*" : "*";
     }
 }

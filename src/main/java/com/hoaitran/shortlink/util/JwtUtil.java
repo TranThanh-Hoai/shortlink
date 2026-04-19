@@ -15,16 +15,20 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    // Ideally, load this from application.properties/yaml. For now, a secure default.
-    // Ensure this key is at least 256 bits (32 bytes) long.
-    @Value("${jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
+    @Value("${jwt.secret}")
     private String secret;
 
     @Value("${jwt.expiration:86400000}") // Default 1 day
     private long jwtExpirationInMs;
 
     private SecretKey getSigningKey() {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("jwt.secret must be configured");
+        }
         byte[] keyBytes = io.jsonwebtoken.io.Decoders.BASE64.decode(secret);
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("jwt.secret must decode to at least 32 bytes");
+        }
         return Keys.hmacShaKeyFor(keyBytes);
     }
 

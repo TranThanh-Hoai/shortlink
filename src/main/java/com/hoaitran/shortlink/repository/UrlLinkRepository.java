@@ -12,9 +12,9 @@ import java.util.Optional;
 @Repository
 public interface UrlLinkRepository extends JpaRepository<UrlLink, Long> {
     Optional<UrlLink> findByShortCode(String shortCode);
-    Optional<UrlLink> findByOriginalUrl(String originalUrl);
     Optional<UrlLink> findByIdempotencyKey(String idempotencyKey);
     boolean existsByShortCode(String shortCode);
+    java.util.List<UrlLink> findAllByOriginalUrlAndUserId(String originalUrl, Long userId);
 
     @Modifying
     @Transactional
@@ -23,4 +23,5 @@ public interface UrlLinkRepository extends JpaRepository<UrlLink, Long> {
 
     java.util.List<UrlLink> findTop10ByOrderByClickCountDesc();
     java.util.List<UrlLink> findAllByUserIdOrderByCreatedAtDesc(Long userId);
+    java.util.List<UrlLink> findByExpiresAtBefore(java.time.LocalDateTime now);
 }

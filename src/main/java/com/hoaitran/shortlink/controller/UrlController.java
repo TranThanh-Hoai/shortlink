@@ -5,6 +5,7 @@ import com.hoaitran.shortlink.dto.response.ApiResponse;
 import com.hoaitran.shortlink.dto.response.ApiResponseFactory;
 import com.hoaitran.shortlink.dto.response.LinkStatsResponse;
 import com.hoaitran.shortlink.dto.response.ShortenResponse;
+import com.hoaitran.shortlink.dto.response.UrlResponseDTO;
 import com.hoaitran.shortlink.entity.UrlLink;
 import com.hoaitran.shortlink.entity.User;
 import com.hoaitran.shortlink.service.AnalyticsService;
@@ -43,14 +44,25 @@ public class UrlController {
         User user = getCurrentUser(userDetails);
 
         // Anti-abuse: check if original URL is the same domain to prevent loops
-        String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
-        if (request.getOriginalUrl().startsWith(baseUrl)) {
-            throw new IllegalArgumentException("Cannot shorten URLs from the same domain");
+        String requestUrl = servletRequest.getRequestURL().toString();
+        try {
+            java.net.URI originalUri = new java.net.URI(request.getOriginalUrl());
+            java.net.URI baseUri = new java.net.URI(requestUrl);
+            
+            String originalHost = originalUri.getHost();
+            String baseHost = baseUri.getHost();
+
+            if (originalHost != null && originalHost.equalsIgnoreCase(baseHost)) {
+                throw new IllegalArgumentException("Cannot shorten URLs from the same domain");
+            }
+        } catch (java.net.URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid URL format");
         }
 
         UrlLink urlLink = urlShortenerService.shortenUrl(request, idempotencyKey, user);
 
         // Construct short URL using a dedicated public path /r/ instead of the API path
+        String baseUrl = requestUrl.replace(servletRequest.getRequestURI(), "");
         String shortUrl = baseUrl + "/r/" + urlLink.getShortCode();
 
         ShortenResponse shortenData = ShortenResponse.builder()
@@ -86,7 +98,7 @@ public class UrlController {
     }
 
     @PatchMapping("/{shortCode}/status")
-    public ResponseEntity<ApiResponse<UrlLink>> updateStatus(
+    public ResponseEntity<ApiResponse<UrlResponseDTO>> updateStatus(
             @PathVariable String shortCode,
             @RequestParam boolean active,
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -94,19 +106,27 @@ public class UrlController {
         User user = getCurrentUser(userDetails);
         UrlLink urlLink = urlShortenerService.updateStatus(shortCode, active, user);
         
-        ApiResponse<UrlLink> response = ApiResponseFactory.success(
+        String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
+        UrlResponseDTO responseData = urlShortenerService.mapToUrlDTO(urlLink, baseUrl);
+
+        ApiResponse<UrlResponseDTO> response = ApiResponseFactory.success(
                 HttpStatus.OK,
                 "URL status updated successfully",
                 servletRequest,
-                urlLink);
+                responseData);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/{shortCode}/stats")
     public ResponseEntity<ApiResponse<LinkStatsResponse>> getStats(
             @PathVariable String shortCode,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest servletRequest) {
-        LinkStatsResponse stats = analyticsService.getLinkStats(shortCode);
+        User user = getCurrentUser(userDetails);
+        String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
+        
+        LinkStatsResponse stats = analyticsService.getLinkStats(shortCode, user, baseUrl);
+        
         ApiResponse<LinkStatsResponse> response = ApiResponseFactory.success(
                 HttpStatus.OK,
                 "Stats retrieved successfully",
@@ -116,9 +136,10 @@ public class UrlController {
     }
 
     @GetMapping("/top")
-    public ResponseEntity<ApiResponse<java.util.List<UrlLink>>> getTopLinks(HttpServletRequest servletRequest) {
-        java.util.List<UrlLink> topLinks = analyticsService.getTopLinks();
-        ApiResponse<java.util.List<UrlLink>> response = ApiResponseFactory.success(
+    public ResponseEntity<ApiResponse<java.util.List<UrlResponseDTO>>> getTopLinks(HttpServletRequest servletRequest) {
+        String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
+        java.util.List<UrlResponseDTO> topLinks = analyticsService.getTopLinks(baseUrl);
+        ApiResponse<java.util.List<UrlResponseDTO>> response = ApiResponseFactory.success(
                 HttpStatus.OK,
                 "Top links retrieved successfully",
                 servletRequest,
@@ -137,13 +158,14 @@ public class UrlController {
     }
 
     @GetMapping("/my-links")
-    public ResponseEntity<ApiResponse<java.util.List<UrlLink>>> getMyLinks(
+    public ResponseEntity<ApiResponse<java.util.List<UrlResponseDTO>>> getMyLinks(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest servletRequest) {
         User user = getCurrentUser(userDetails);
-        java.util.List<UrlLink> myLinks = urlShortenerService.getUserLinks(user);
+        String baseUrl = servletRequest.getRequestURL().toString().replace(servletRequest.getRequestURI(), "");
+        java.util.List<UrlResponseDTO> myLinks = urlShortenerService.getUserLinks(user, baseUrl);
         
-        ApiResponse<java.util.List<UrlLink>> response = ApiResponseFactory.success(
+        ApiResponse<java.util.List<UrlResponseDTO>> response = ApiResponseFactory.success(
                 HttpStatus.OK,
                 "User links retrieved successfully",
                 servletRequest,

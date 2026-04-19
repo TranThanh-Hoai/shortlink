@@ -26,7 +26,12 @@ import java.nio.charset.StandardCharsets;
 @ConditionalOnProperty(name = "app.ratelimit.enabled", havingValue = "true", matchIfMissing = true)
 public class RateLimitingFilter extends OncePerRequestFilter {
 
-    private static final String SHORTEN_API = "/api/v1/urls/shorten";
+    private static final java.util.List<String> PROTECTED_URL_PREFIXES = java.util.List.of(
+            "/api/v1/urls/shorten",
+            "/api/v1/auth/login",
+            "/api/v1/auth/register",
+            "/r/"
+    );
 
     private final ProxyManager<byte[]> proxyManager;
     private final BucketConfiguration bucketConfiguration;
@@ -39,13 +44,23 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        if (request.getRequestURI().startsWith(SHORTEN_API)) {
+        String requestUri = request.getRequestURI();
+        boolean isProtected = PROTECTED_URL_PREFIXES.stream().anyMatch(requestUri::startsWith);
+
+        if (isProtected) {
             String clientIp = getClientIp(request);
-            byte[] clientIpBytes = clientIp.getBytes(StandardCharsets.UTF_8);
-            Bucket bucket = proxyManager.builder().build(clientIpBytes, bucketConfiguration);
+            String pathPrefix = PROTECTED_URL_PREFIXES.stream()
+                    .filter(requestUri::startsWith)
+                    .findFirst()
+                    .orElse("other");
+            
+            String bucketKey = clientIp + ":" + pathPrefix;
+            byte[] bucketKeyBytes = bucketKey.getBytes(StandardCharsets.UTF_8);
+            
+            Bucket bucket = proxyManager.builder().build(bucketKeyBytes, bucketConfiguration);
 
             if (!bucket.tryConsume(1)) {
-                log.warn("Rate limit exceeded for IP: {}", clientIp);
+                log.warn("Rate limit exceeded for IP: {} on path: {}", clientIp, requestUri);
                 response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
                 response.setContentType("application/json; charset=UTF-8");
                 objectMapper.writeValue(

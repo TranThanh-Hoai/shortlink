@@ -35,7 +35,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/r/**").permitAll()
                 .requestMatchers("/api/v1/urls/*/qr").permitAll()
-                .requestMatchers("/actuator/**").permitAll() // Optionally permit actuator endpoints, or secure them
+                .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())

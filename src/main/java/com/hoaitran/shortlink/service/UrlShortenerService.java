@@ -3,6 +3,7 @@ package com.hoaitran.shortlink.service;
 import com.hoaitran.shortlink.entity.UrlLink;
 import com.hoaitran.shortlink.entity.User;
 import com.hoaitran.shortlink.exception.ResourceNotFoundException;
+import com.hoaitran.shortlink.repository.ClickLogRepository;
 import com.hoaitran.shortlink.repository.UrlLinkRepository;
 import com.hoaitran.shortlink.util.Base62Utils;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -16,12 +17,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.hoaitran.shortlink.dto.request.ShortenRequest;
+import com.hoaitran.shortlink.dto.response.UrlResponseDTO;
 import com.hoaitran.shortlink.exception.AliasAlreadyExistsException;
 import com.hoaitran.shortlink.exception.IdempotencyConflictException;
+import org.springframework.cache.annotation.CacheEvict;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class UrlShortenerService {
+    private final ClickLogRepository clickLogRepository;
     private final UrlLinkRepository urlLinkRepository;
     private final MeterRegistry meterRegistry;
     private static final int CODE_LENGTH = 7;
@@ -70,16 +75,11 @@ public class UrlShortenerService {
                     });
         }
 
-        // Simplistic De-duplication check: Since findByOriginalUrl returns Optional,
-        // it may throw NonUniqueResultException if multiple users shorten the same url.
-        // We catch exception or just find first if we changed repository.
-        // For now, keeping existing logic, just adding .user(user) to new links.
-        return urlLinkRepository.findByOriginalUrl(originalUrl)
-                // Optionally filter by user to only return if same user shortened it before
-                .filter(url -> url.getUser() != null && url.getUser().getId().equals(user.getId()))
+        return urlLinkRepository.findAllByOriginalUrlAndUserId(originalUrl, user.getId()).stream()
                 .filter(url -> url.getExpiresAt() == null || url.getExpiresAt().isAfter(LocalDateTime.now()))
                 .filter(url -> normalizedExpiresAt == null
                         || (url.getExpiresAt() != null && url.getExpiresAt().equals(normalizedExpiresAt)))
+                .findFirst()
                 .orElseGet(() -> {
                     String code;
                     do {
@@ -129,16 +129,21 @@ public class UrlShortenerService {
     }
 
     @Transactional
+    @CacheEvict(value = "urls", key = "#shortCode")
     public void deleteUrl(String shortCode, User currentUser) {
         UrlLink urlLink = urlLinkRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Short URL not found: " + shortCode));
         
         checkOwnership(urlLink, currentUser);
         
+        // Delete associated click logs first to maintain referential integrity
+        clickLogRepository.deleteByUrlLinkId(urlLink.getId());
+        
         urlLinkRepository.delete(urlLink);
     }
 
     @Transactional
+    @CacheEvict(value = "urls", key = "#shortCode")
     public UrlLink updateStatus(String shortCode, boolean active, User currentUser) {
         UrlLink urlLink = urlLinkRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Short URL not found: " + shortCode));
@@ -149,7 +154,6 @@ public class UrlShortenerService {
         return urlLinkRepository.save(urlLink);
     }
     
-    // Add check ownership method for stats if we want to restrict
     public void checkOwnership(UrlLink urlLink, User currentUser) {
         if (urlLink.getUser() == null || !urlLink.getUser().getId().equals(currentUser.getId())) {
              throw new AccessDeniedException("You do not have permission to modify this link");
@@ -157,7 +161,21 @@ public class UrlShortenerService {
     }
 
     @Transactional(readOnly = true)
-    public java.util.List<UrlLink> getUserLinks(User user) {
-        return urlLinkRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId());
+    public java.util.List<UrlResponseDTO> getUserLinks(User user, String baseUrl) {
+        return urlLinkRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId()).stream()
+                .map(link -> mapToUrlDTO(link, baseUrl))
+                .collect(Collectors.toList());
+    }
+
+    public UrlResponseDTO mapToUrlDTO(UrlLink urlLink, String baseUrl) {
+        return UrlResponseDTO.builder()
+                .originalUrl(urlLink.getOriginalUrl())
+                .shortCode(urlLink.getShortCode())
+                .shortUrl(baseUrl + "/r/" + urlLink.getShortCode())
+                .createdAt(urlLink.getCreatedAt())
+                .expiresAt(urlLink.getExpiresAt())
+                .active(urlLink.isActive())
+                .clickCount(urlLink.getClickCount())
+                .build();
     }
 }
