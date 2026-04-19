@@ -13,6 +13,28 @@ services:
       - postgres
       - redis
 
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: shortlink-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:12.2.0
+    container_name: shortlink-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    volumes:
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafana_data:/var/lib/grafana
+
   postgres:
     image: postgres:16-alpine
     container_name: shortlink-db
@@ -33,3 +55,4 @@ services:
 
 volumes:
   postgres_data:
+  grafana_data:

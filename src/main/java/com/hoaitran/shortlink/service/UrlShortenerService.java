@@ -4,6 +4,7 @@ import com.hoaitran.shortlink.entity.UrlLink;
 import com.hoaitran.shortlink.exception.ResourceNotFoundException;
 import com.hoaitran.shortlink.repository.UrlLinkRepository;
 import com.hoaitran.shortlink.util.Base62Utils;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ import com.hoaitran.shortlink.exception.IdempotencyConflictException;
 @RequiredArgsConstructor
 public class UrlShortenerService {
     private final UrlLinkRepository urlLinkRepository;
+    private final MeterRegistry meterRegistry;
     private static final int CODE_LENGTH = 7;
 
     @Transactional
@@ -87,7 +89,9 @@ public class UrlShortenerService {
                             .expiresAt(normalizedExpiresAt)
                             .build();
 
-                    return urlLinkRepository.save(urlLink);
+                    UrlLink saved = urlLinkRepository.save(urlLink);
+                    meterRegistry.counter("shortlink.created").increment();
+                    return saved;
                 });
     }
 
@@ -111,7 +115,10 @@ public class UrlShortenerService {
     public String getOriginalUrl(String shortCode) {
         return urlLinkRepository.findByShortCode(shortCode)
                 .filter(url -> url.isActive() && (url.getExpiresAt() == null || url.getExpiresAt().isAfter(LocalDateTime.now())))
-                .map(UrlLink::getOriginalUrl)
+                .map(url -> {
+                    meterRegistry.counter("shortlink.redirect").increment();
+                    return url.getOriginalUrl();
+                })
                 .orElseThrow(() -> new ResourceNotFoundException("Short URL not found, inactive, or expired: " + shortCode));
     }
 
