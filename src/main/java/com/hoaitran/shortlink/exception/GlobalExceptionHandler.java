@@ -68,6 +68,16 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(ex, HttpStatus.METHOD_NOT_ALLOWED, request, ex.getMessage());
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex, HttpServletRequest request) {
+        return buildErrorResponse(ex, HttpStatus.FORBIDDEN, request, "You do not have permission to access this resource");
+    }
+
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAuthenticationException(org.springframework.security.core.AuthenticationException ex, HttpServletRequest request) {
+        return buildErrorResponse(ex, HttpStatus.UNAUTHORIZED, request, "Authentication failed: " + ex.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleGeneralException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception at {}: ", request.getRequestURI(), ex);

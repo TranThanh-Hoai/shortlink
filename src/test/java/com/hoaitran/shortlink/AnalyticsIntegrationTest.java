@@ -36,17 +36,27 @@ public class AnalyticsIntegrationTest {
     @Autowired
     private UrlShortenerService urlShortenerService;
 
+    @Autowired
+    private com.hoaitran.shortlink.repository.UserRepository userRepository;
+
     @BeforeEach
     void setUp() {
         clickLogRepository.deleteAll();
         urlLinkRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
     @Test
     void testClickLoggingAsynchronously() throws Exception {
+        com.hoaitran.shortlink.entity.User user = new com.hoaitran.shortlink.entity.User();
+        user.setUsername("testuser");
+        user.setEmail("test@email.com");
+        user.setPassword("hashedpassword");
+        user = userRepository.save(user);
+
         // 1. Prepare a link
         String originalUrl = "https://example.com";
-        UrlLink urlLink = urlShortenerService.shortenUrl(new ShortenRequest(originalUrl), null);
+        UrlLink urlLink = urlShortenerService.shortenUrl(new ShortenRequest(originalUrl), null, user);
         String shortCode = urlLink.getShortCode();
 
         // 2. Perform redirect

@@ -30,6 +30,11 @@ public class UrlLink {
     @Column(length = 20)
     private String requestedCustomAlias;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private User user;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

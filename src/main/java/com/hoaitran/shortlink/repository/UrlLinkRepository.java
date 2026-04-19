@@ -22,4 +22,5 @@ public interface UrlLinkRepository extends JpaRepository<UrlLink, Long> {
     void incrementClickCount(String shortCode);
 
     java.util.List<UrlLink> findTop10ByOrderByClickCountDesc();
+    java.util.List<UrlLink> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 }

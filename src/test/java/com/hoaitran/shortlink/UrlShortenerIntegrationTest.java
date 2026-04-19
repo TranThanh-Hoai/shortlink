@@ -41,10 +41,23 @@ public class UrlShortenerIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private com.hoaitran.shortlink.service.AuthService authService;
+
+    @Autowired
+    private com.hoaitran.shortlink.repository.UserRepository userRepository;
+
+    private String jwtToken;
+
     @BeforeEach
     void setUp() {
         clickLogRepository.deleteAll();
         urlLinkRepository.deleteAll();
+        userRepository.deleteAll();
+
+        com.hoaitran.shortlink.dto.request.RegisterRequest registerRequest = new com.hoaitran.shortlink.dto.request.RegisterRequest("testuser", "test@test.com", "password");
+        com.hoaitran.shortlink.dto.response.AuthResponse authResponse = authService.register(registerRequest);
+        jwtToken = authResponse.getToken();
     }
 
     @Test
@@ -54,6 +67,7 @@ public class UrlShortenerIntegrationTest {
 
         // 1. Test Shorten API
         MvcResult result = mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Authorization", "Bearer " + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -70,9 +84,9 @@ public class UrlShortenerIntegrationTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", originalUrl));
 
-        // 2.1 Test Old Redirect Path returns 405 (Method Not Allowed) because GET is no longer supported on this path, but DELETE is.
+        // 2.1 Test Old Redirect Path returns 403 (Forbidden/Unauthorized) because it's an authenticated endpoint and we didn't pass JWT here
         mockMvc.perform(get("/api/v1/urls/" + shortCode))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().isForbidden());
 
         // 3. Test 404 for invalid code
         mockMvc.perform(get("/r/invalidCode"))
@@ -85,6 +99,7 @@ public class UrlShortenerIntegrationTest {
         ShortenRequest invalidRequest = new ShortenRequest("invalid-url");
 
         mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Authorization", "Bearer " + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest())
@@ -114,6 +129,7 @@ public class UrlShortenerIntegrationTest {
                 .build();
 
         mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Authorization", "Bearer " + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -123,27 +139,28 @@ public class UrlShortenerIntegrationTest {
                 .andExpect(jsonPath("$.path", is("/api/v1/urls/shorten")));
 
         mockMvc.perform(patch("/api/v1/urls/springdocs/status")
+                .header("Authorization", "Bearer " + jwtToken)
                 .param("active", "false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.active", is(false)))
                 .andExpect(jsonPath("$.code", is(200)));
 
-        mockMvc.perform(get("/api/v1/urls/springdocs/stats"))
+        mockMvc.perform(get("/api/v1/urls/springdocs/stats").header("Authorization", "Bearer " + jwtToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.link.shortCode", is("springdocs")));
 
-        mockMvc.perform(get("/api/v1/urls/top"))
+        mockMvc.perform(get("/api/v1/urls/top").header("Authorization", "Bearer " + jwtToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(1)))
                 .andExpect(jsonPath("$.data[0].shortCode", is("springdocs")));
 
-        MvcResult qrResult = mockMvc.perform(get("/api/v1/urls/springdocs/qr"))
+        MvcResult qrResult = mockMvc.perform(get("/api/v1/urls/springdocs/qr").header("Authorization", "Bearer " + jwtToken))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_PNG))
                 .andReturn();
         assertTrue(qrResult.getResponse().getContentAsByteArray().length > 0);
 
-        mockMvc.perform(delete("/api/v1/urls/springdocs"))
+        mockMvc.perform(delete("/api/v1/urls/springdocs").header("Authorization", "Bearer " + jwtToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code", is(200)))
                 .andExpect(jsonPath("$.message", is("URL deleted successfully")));
@@ -157,6 +174,7 @@ public class UrlShortenerIntegrationTest {
                 .build();
 
         MvcResult first = mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Authorization", "Bearer " + jwtToken)
                 .header("Idempotency-Key", "idem-123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -164,6 +182,7 @@ public class UrlShortenerIntegrationTest {
                 .andReturn();
 
         MvcResult second = mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Authorization", "Bearer " + jwtToken)
                 .header("Idempotency-Key", "idem-123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -179,6 +198,7 @@ public class UrlShortenerIntegrationTest {
                 .build();
 
         mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Authorization", "Bearer " + jwtToken)
                 .header("Idempotency-Key", "idem-123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(differentRequest)))

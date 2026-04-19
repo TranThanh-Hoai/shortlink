@@ -50,10 +50,23 @@ public class AdvancedFeaturesIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private com.hoaitran.shortlink.service.AuthService authService;
+
+    @Autowired
+    private com.hoaitran.shortlink.repository.UserRepository userRepository;
+
+    private String jwtToken;
+
     @BeforeEach
     void setUp() {
         clickLogRepository.deleteAllInBatch();
         urlLinkRepository.deleteAllInBatch();
+        userRepository.deleteAllInBatch();
+
+        com.hoaitran.shortlink.dto.request.RegisterRequest registerRequest = new com.hoaitran.shortlink.dto.request.RegisterRequest("testuser2", "test2@test.com", "password");
+        com.hoaitran.shortlink.dto.response.AuthResponse authResponse = authService.register(registerRequest);
+        jwtToken = authResponse.getToken();
     }
 
     @Test
@@ -62,6 +75,7 @@ public class AdvancedFeaturesIntegrationTest {
         ShortenRequest request = new ShortenRequest(originalUrl);
 
         MvcResult firstResult = mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Authorization", "Bearer " + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -69,6 +83,7 @@ public class AdvancedFeaturesIntegrationTest {
         String firstCode = objectMapper.readTree(firstResult.getResponse().getContentAsString()).at("/data/shortCode").asText();
 
         MvcResult secondResult = mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Authorization", "Bearer " + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -83,6 +98,7 @@ public class AdvancedFeaturesIntegrationTest {
         String alias = "my-alias";
         
         mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Authorization", "Bearer " + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(ShortenRequest.builder()
                         .originalUrl("https://first.com")
@@ -91,6 +107,7 @@ public class AdvancedFeaturesIntegrationTest {
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/v1/urls/shorten")
+                .header("Authorization", "Bearer " + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(ShortenRequest.builder()
                         .originalUrl("https://second.com")
