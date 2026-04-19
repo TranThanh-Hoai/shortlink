@@ -125,8 +125,7 @@ Dự án chú trọng vào chất lượng mã nguồn với bộ Integration Te
 ## 👤 Tác giả
 
 **Tran Thanh Hoai**
-- Email: [hoaitran.dev@gmail.com](mailto:hoaitran.dev@gmail.com)
-- LinkedIn: [linkedin.com/in/tranthanh-hoai/](https://www.linkedin.com/in/tranthanhhoai/)
+- Email: [tthoai654@gmail.com](mailto:tthoai654@gmail.com)
 - GitHub: [@TranThanh-Hoai](https://github.com/TranThanh-Hoai)
 
 ---
