@@ -3,17 +3,19 @@ package com.hoaitran.shortlink.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "url_links", indexes = @Index(name = "idx_short_code", columnList = "shortCode"))
+@Table(name = "links")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UrlLink {
+public class Link {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -21,29 +23,21 @@ public class UrlLink {
     @Column(nullable = false, length = 2048)
     private String originalUrl;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(nullable = true, unique = true, length = 10)
     private String shortCode;
-
-    @Column(unique = true, length = 128)
-    private String idempotencyKey;
-
-    @Column(length = 20)
-    private String requestedCustomAlias;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    @com.fasterxml.jackson.annotation.JsonIgnore
-    private User user;
 
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
+
     private LocalDateTime expiresAt;
 
     @Builder.Default
-    private boolean isActive = true;
+    private long clickCount = 0;
 
     @Builder.Default
-    private long clickCount = 0;
+    private boolean isActive = true;
 }
