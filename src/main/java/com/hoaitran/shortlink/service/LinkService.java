@@ -4,9 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.hoaitran.shortlink.entity.ClickEvent;
 import com.hoaitran.shortlink.entity.Link;
-import com.hoaitran.shortlink.repository.ClickEventRepository;
 import com.hoaitran.shortlink.repository.LinkRepository;
 import com.hoaitran.shortlink.utils.Base62Utils;
 
@@ -15,7 +13,7 @@ import com.hoaitran.shortlink.utils.Base62Utils;
 public class LinkService {
 
     private final LinkRepository linkRepository;
-    private final ClickEventRepository clickEventRepository;
+    private final ClickEventService clickEventService;
 
     @Transactional
     public Link shortenUrl(String originalUrl) {
@@ -40,10 +38,7 @@ public class LinkService {
             link.setClickCount(link.getClickCount() + 1);
             linkRepository.save(link);
 
-            ClickEvent clickEvent = ClickEvent.builder()
-                    .link(link)
-                    .build();
-            clickEventRepository.save(clickEvent);
+            clickEventService.recordClick(link);
 
             return link.getOriginalUrl();
         }
