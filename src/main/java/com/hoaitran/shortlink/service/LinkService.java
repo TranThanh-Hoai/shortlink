@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.hoaitran.shortlink.entity.Link;
 import com.hoaitran.shortlink.repository.LinkRepository;
+import com.hoaitran.shortlink.utils.Base62Utils;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +21,13 @@ public class LinkService {
                 .originalUrl(originalUrl)
                 .build();
 
+        link = linkRepository.save(link);
+
+        // 2. Dùng Utils để mã hóa ID vừa tạo
+        String shortCode = Base62Utils.encode(link.getId());
+
+        // 3. Cập nhật mã chuẩn và lưu lại
+        link.setShortCode(shortCode);
         return linkRepository.save(link);
     }
 
