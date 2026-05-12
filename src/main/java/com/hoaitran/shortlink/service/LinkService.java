@@ -21,15 +21,21 @@ public class LinkService {
     private final ClickEventService clickEventService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final LinkMapper linkMapper;
+    private final UserService userService;
 
     private static final String URL_CACHE_KEY = "shortlink:url:";
 
     @Transactional
-    public Link shortenUrl(String originalUrl) {
+    public Link shortenUrl(String originalUrl, Long userId) {
         // 1. Tạo đối tượng Link
-        Link link = Link.builder()
-                .originalUrl(originalUrl)
-                .build();
+        Link.LinkBuilder linkBuilder = Link.builder()
+                .originalUrl(originalUrl);
+
+        if (userId != null) {
+            userService.findById(userId).ifPresent(user -> linkBuilder.user(user));
+        }
+
+        Link link = linkBuilder.build();
 
         link = linkRepository.save(link);
 

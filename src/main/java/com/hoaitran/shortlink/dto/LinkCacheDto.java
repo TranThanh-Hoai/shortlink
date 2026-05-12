@@ -16,4 +16,5 @@ public class LinkCacheDto implements Serializable {
     private String shortCode;
     private boolean isActive;
     private LocalDateTime expiresAt;
+    private Long userId;
 }

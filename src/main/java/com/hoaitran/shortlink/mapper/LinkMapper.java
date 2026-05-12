@@ -17,6 +17,7 @@ public class LinkMapper {
                 .shortCode(link.getShortCode())
                 .isActive(link.isActive())
                 .expiresAt(link.getExpiresAt())
+                .userId(link.getUser() != null ? link.getUser().getId() : null)
                 .build();
     }
 
@@ -24,12 +25,15 @@ public class LinkMapper {
         if (cacheDto == null) {
             return null;
         }
-        return Link.builder()
+        Link link = Link.builder()
                 .id(cacheDto.getId())
                 .originalUrl(cacheDto.getOriginalUrl())
                 .shortCode(cacheDto.getShortCode())
                 .isActive(cacheDto.isActive())
                 .expiresAt(cacheDto.getExpiresAt())
                 .build();
+        
+        // Note: User entity is not fully restored from cache DTO
+        return link;
     }
 }
