@@ -1,10 +1,16 @@
 package com.hoaitran.shortlink.service;
 
+import com.hoaitran.shortlink.dto.AuthResponse;
 import com.hoaitran.shortlink.dto.LoginRequest;
 import com.hoaitran.shortlink.dto.RegisterRequest;
+import com.hoaitran.shortlink.entity.Role;
 import com.hoaitran.shortlink.entity.User;
 import com.hoaitran.shortlink.repository.UserRepository;
+import com.hoaitran.shortlink.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -13,8 +19,11 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
 
-    public User register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new RuntimeException("Username already exists");
         }
@@ -24,22 +33,38 @@ public class UserService {
 
         User user = User.builder()
                 .username(request.getUsername())
-                .password(request.getPassword()) // Note: Should be hashed in production
+                .password(passwordEncoder.encode(request.getPassword()))
                 .email(request.getEmail())
+                .role(Role.USER)
                 .build();
 
-        return userRepository.save(user);
+        userRepository.save(user);
+        
+        var jwtToken = jwtService.generateToken(new CustomUserDetails(user));
+        return AuthResponse.builder()
+                .accessToken(jwtToken)
+                .username(user.getUsername())
+                .role(user.getRole())
+                .build();
     }
 
-    public User login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsername(),
+                        request.getPassword()
+                )
+        );
+
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (!user.getPassword().equals(request.getPassword())) {
-            throw new RuntimeException("Invalid password");
-        }
-
-        return user;
+        var jwtToken = jwtService.generateToken(new CustomUserDetails(user));
+        return AuthResponse.builder()
+                .accessToken(jwtToken)
+                .username(user.getUsername())
+                .role(user.getRole())
+                .build();
     }
 
     public Optional<User> findById(Long id) {
