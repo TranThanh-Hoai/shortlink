@@ -95,9 +95,5 @@ Sau khi ứng dụng khởi chạy, bạn có thể truy cập tài liệu API t
 
 Mọi đóng góp đều được trân trọng! Vui lòng tạo Issue hoặc gửi Pull Request nếu bạn có ý tưởng cải thiện dự án.
 
-## 📄 Giấy phép
-
-Dự án này được phân phối dưới giấy phép MIT.
-
 ---
 ✨ Phát triển bởi [TranThanh-Hoai](https://github.com/TranThanh-Hoai)
