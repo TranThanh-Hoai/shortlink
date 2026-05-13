@@ -1,86 +1,45 @@
 package com.hoaitran.shortlink.exception;
 
-import com.hoaitran.shortlink.dto.response.ApiResponse;
-import com.hoaitran.shortlink.dto.response.ApiResponseFactory;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.HttpRequestMethodNotSupportedException;
-import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.servlet.NoHandlerFoundException;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestControllerAdvice
-@Slf4j
 public class GlobalExceptionHandler {
 
-    private ResponseEntity<ApiResponse<Object>> buildErrorResponse(Exception ex, HttpStatus status, HttpServletRequest request, String message) {
-        ApiResponse<Object> response = ApiResponseFactory.error(status, message, request);
-        return new ResponseEntity<>(response, status);
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleBadCredentialsException(BadCredentialsException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, "Invalid credentials", ex.getMessage());
     }
 
-    @ExceptionHandler(AliasAlreadyExistsException.class)
-    public ResponseEntity<ApiResponse<Object>> handleAliasAlreadyExists(AliasAlreadyExistsException ex, HttpServletRequest request) {
-        return buildErrorResponse(ex, HttpStatus.CONFLICT, request, ex.getMessage());
+    @ExceptionHandler(UsernameNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleUsernameNotFoundException(UsernameNotFoundException ex) {
+        return buildResponse(HttpStatus.NOT_FOUND, "User not found", ex.getMessage());
     }
 
-    @ExceptionHandler(IdempotencyConflictException.class)
-    public ResponseEntity<ApiResponse<Object>> handleIdempotencyConflict(IdempotencyConflictException ex, HttpServletRequest request) {
-        return buildErrorResponse(ex, HttpStatus.CONFLICT, request, ex.getMessage());
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponse<Object>> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
-        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request, ex.getMessage());
-    }
-
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<Object>> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
-        return buildErrorResponse(ex, HttpStatus.NOT_FOUND, request, ex.getMessage());
-    }
-
-    @ExceptionHandler({NoHandlerFoundException.class, NoResourceFoundException.class})
-    public ResponseEntity<ApiResponse<Object>> handleNoHandlerFound(Exception ex, HttpServletRequest request) {
-        String path = "";
-        if (ex instanceof NoHandlerFoundException) {
-            path = ((NoHandlerFoundException) ex).getRequestURL();
-        } else if (ex instanceof NoResourceFoundException) {
-            path = ((NoResourceFoundException) ex).getResourcePath();
-        }
-        return buildErrorResponse(ex, HttpStatus.NOT_FOUND, request, "The requested path does not exist: " + path);
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Object>> handleValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        String message = ex.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .collect(Collectors.joining(", "));
-        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request, message);
-    }
-
-    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ApiResponse<Object>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
-        return buildErrorResponse(ex, HttpStatus.METHOD_NOT_ALLOWED, request, ex.getMessage());
-    }
-
-    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<Object>> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex, HttpServletRequest request) {
-        return buildErrorResponse(ex, HttpStatus.FORBIDDEN, request, "You do not have permission to access this resource");
-    }
-
-    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
-    public ResponseEntity<ApiResponse<Object>> handleAuthenticationException(org.springframework.security.core.AuthenticationException ex, HttpServletRequest request) {
-        return buildErrorResponse(ex, HttpStatus.UNAUTHORIZED, request, "Authentication failed: " + ex.getMessage());
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Runtime Error", ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Object>> handleGeneralException(Exception ex, HttpServletRequest request) {
-        log.error("Unhandled exception at {}: ", request.getRequestURI(), ex);
-        return buildErrorResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR, request, "An unexpected error occurred");
+    public ResponseEntity<Map<String, Object>> handleGlobalException(Exception ex) {
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex.getMessage());
+    }
+
+    private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String error, String message) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", status.value());
+        body.put("error", error);
+        body.put("message", message);
+        return new ResponseEntity<>(body, status);
     }
 }
