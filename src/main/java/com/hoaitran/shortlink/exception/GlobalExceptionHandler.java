@@ -24,6 +24,21 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, "User not found", ex.getMessage());
     }
 
+    @ExceptionHandler(InvalidAliasException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidAliasException(InvalidAliasException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid Alias", ex.getMessage());
+    }
+
+    @ExceptionHandler(AliasAlreadyExistsException.class)
+    public ResponseEntity<Map<String, Object>> handleAliasAlreadyExistsException(AliasAlreadyExistsException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Alias Already Exists", ex.getMessage());
+    }
+
+    @ExceptionHandler(LinkExpiredException.class)
+    public ResponseEntity<Map<String, Object>> handleLinkExpiredException(LinkExpiredException ex) {
+        return buildResponse(HttpStatus.GONE, "Link Expired", ex.getMessage());
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, "Runtime Error", ex.getMessage());
