@@ -16,9 +16,6 @@
 - **Analytics thời gian thực:** Thu thập thông tin click (Browser, OS, Device, Location) một cách bất đồng bộ (`@Async`).
 
 ### ⚡ Hiệu suất & Độ tin cậy
-- **Multi-level Caching Strategy:**
-    - **L1 Cache (Caffeine):** Tốc độ cực nhanh cho các liên kết hot nhất ngay tại ứng dụng.
-    - **L2 Cache (Redis):** Đồng bộ hóa dữ liệu giữa các instance và cache tập trung.
 - **Idempotency API:** Bảo vệ API tạo link bằng `Idempotency-Key`, ngăn chặn tạo trùng lặp do lỗi mạng hoặc retry.
 - **Fail-safe Design:** Quản lý vòng đời cache thông minh (Invalidation/Repopulation) khi dữ liệu gốc thay đổi.
 
