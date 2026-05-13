@@ -40,4 +40,8 @@ public class Link {
 
     @Builder.Default
     private boolean isActive = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 }

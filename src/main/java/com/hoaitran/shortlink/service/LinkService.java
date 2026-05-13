@@ -1,12 +1,17 @@
+
 package com.hoaitran.shortlink.service;
 
+import com.hoaitran.shortlink.dto.LinkCacheDto;
+import com.hoaitran.shortlink.entity.Link;
+import com.hoaitran.shortlink.mapper.LinkMapper;
+import com.hoaitran.shortlink.repository.LinkRepository;
+import com.hoaitran.shortlink.utils.Base62Utils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.hoaitran.shortlink.entity.Link;
-import com.hoaitran.shortlink.repository.LinkRepository;
-import com.hoaitran.shortlink.utils.Base62Utils;
+import java.util.concurrent.TimeUnit;
 
 import com.hoaitran.shortlink.dto.request.ShortenRequest;
 import com.hoaitran.shortlink.exception.InvalidAliasException;
@@ -22,6 +27,11 @@ public class LinkService {
 
     private final LinkRepository linkRepository;
     private final ClickEventService clickEventService;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final LinkMapper linkMapper;
+    private final UserService userService;
+
+    private static final String URL_CACHE_KEY = "shortlink:url:";
 
     @Transactional
     public Link shortenUrl(ShortenRequest request) {
