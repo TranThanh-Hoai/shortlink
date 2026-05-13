@@ -1,6 +1,7 @@
 package com.hoaitran.shortlink.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,6 +13,7 @@ import java.io.IOException;
 
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "Link Management", description = "Endpoints for creating and managing short links")
 public class LinkController {
 
     private final LinkService linkService;
