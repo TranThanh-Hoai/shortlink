@@ -23,7 +23,7 @@ public class Link {
     @Column(nullable = false, length = 2048)
     private String originalUrl;
 
-    @Column(nullable = true, unique = true, length = 10)
+    @Column(nullable = true, unique = true, length = 30)
     private String shortCode;
 
     @CreationTimestamp

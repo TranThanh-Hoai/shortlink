@@ -18,7 +18,7 @@ public class LinkController {
 
     @PostMapping("/api/shorten")
     public Link shorten(@RequestBody ShortenRequest request) {
-        return linkService.shortenUrl(request.getUrl());
+        return linkService.shortenUrl(request);
     }
 
     @GetMapping("/{shortCode}")

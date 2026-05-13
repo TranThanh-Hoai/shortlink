@@ -8,6 +8,14 @@ import com.hoaitran.shortlink.entity.Link;
 import com.hoaitran.shortlink.repository.LinkRepository;
 import com.hoaitran.shortlink.utils.Base62Utils;
 
+import com.hoaitran.shortlink.dto.request.ShortenRequest;
+import com.hoaitran.shortlink.exception.InvalidAliasException;
+import com.hoaitran.shortlink.exception.AliasAlreadyExistsException;
+import com.hoaitran.shortlink.exception.LinkExpiredException;
+
+import java.time.LocalDateTime;
+import java.time.Duration;
+
 @Service
 @RequiredArgsConstructor
 public class LinkService {
@@ -16,25 +24,67 @@ public class LinkService {
     private final ClickEventService clickEventService;
 
     @Transactional
-    public Link shortenUrl(String originalUrl) {
-        // 1. Tạo đối tượng Link
-        Link link = Link.builder()
-                .originalUrl(originalUrl)
-                .build();
+    public Link shortenUrl(ShortenRequest request) {
+        String alias = request.getAlias();
+        if (alias != null && !alias.isEmpty()) {
+            if (!alias.matches("^[a-zA-Z0-9.-]+$")) {
+                throw new InvalidAliasException("Alias only allows alphanumeric characters, dot, and hyphen.");
+            }
+            if (linkRepository.existsByShortCode(alias)) {
+                throw new AliasAlreadyExistsException("Alias '" + alias + "' already exists.");
+            }
+        }
 
-        link = linkRepository.save(link);
+        Link.LinkBuilder linkBuilder = Link.builder()
+                .originalUrl(request.getUrl());
 
-        // 2. Dùng Utils để mã hóa ID vừa tạo
-        String shortCode = Base62Utils.encode(link.getId());
+        if (request.getUserId() != null) {
+            userService.findById(request.getUserId()).ifPresent(user -> linkBuilder.user(user));
+        }
 
-        // 3. Cập nhật mã chuẩn và lưu lại
-        link.setShortCode(shortCode);
-        return linkRepository.save(link);
+        if (request.getExpiresAt() != null) {
+            linkBuilder.expiresAt(request.getExpiresAt());
+        }
+
+        Link link = linkBuilder.build();
+
+        if (alias != null && !alias.isEmpty()) {
+            link.setShortCode(alias);
+            link = linkRepository.save(link);
+        } else {
+            link = linkRepository.save(link);
+            String shortCode = Base62Utils.encode(link.getId());
+            link.setShortCode(shortCode);
+            link = linkRepository.save(link);
+        }
+
+        cacheLink(link);
+
+        return link;
     }
 
     public String getOriginalUrl(String shortCode) {
-        Link link = linkRepository.findByShortCode(shortCode).orElse(null);
+        LinkCacheDto cacheDto = (LinkCacheDto) redisTemplate.opsForValue().get(URL_CACHE_KEY + shortCode);
+        Link link;
+
+        if (cacheDto != null) {
+            link = linkMapper.toEntity(cacheDto);
+        } else {
+            link = linkRepository.findByShortCode(shortCode).orElse(null);
+            if (link != null) {
+                cacheLink(link);
+            }
+        }
+
         if (link != null) {
+            if (link.getExpiresAt() != null && link.getExpiresAt().isBefore(LocalDateTime.now())) {
+                redisTemplate.delete(URL_CACHE_KEY + shortCode);
+                throw new LinkExpiredException("Link has expired.");
+            }
+            if (!link.isActive()) {
+                throw new LinkExpiredException("Link is inactive.");
+            }
+
             link.setClickCount(link.getClickCount() + 1);
             linkRepository.save(link);
 
@@ -43,5 +93,17 @@ public class LinkService {
             return link.getOriginalUrl();
         }
         return null;
+    }
+
+    private void cacheLink(Link link) {
+        long ttlInSeconds = TimeUnit.DAYS.toSeconds(7);
+        if (link.getExpiresAt() != null) {
+            long remainingSeconds = Duration.between(LocalDateTime.now(), link.getExpiresAt()).getSeconds();
+            if (remainingSeconds <= 0) {
+                return; // already expired
+            }
+            ttlInSeconds = Math.min(ttlInSeconds, remainingSeconds);
+        }
+        redisTemplate.opsForValue().set(URL_CACHE_KEY + link.getShortCode(), linkMapper.toCacheDto(link), ttlInSeconds, TimeUnit.SECONDS);
     }
 }
