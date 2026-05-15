@@ -8,6 +8,10 @@ import com.hoaitran.shortlink.entity.ClickEvent;
 import com.hoaitran.shortlink.entity.Link;
 import com.hoaitran.shortlink.repository.ClickEventRepository;
 
+import com.hoaitran.shortlink.dto.response.ClickEventResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 
 @Service
@@ -24,7 +28,11 @@ public class ClickEventService {
         clickEventRepository.save(clickEvent);
     }
 
-    public List<ClickEvent> getClicksByLinkId(Long linkId) {
-        return clickEventRepository.findByLinkId(linkId);
+    public Page<ClickEventResponse> getClicksByLinkId(Long linkId, Pageable pageable) {
+        return clickEventRepository.findByLinkId(linkId, pageable)
+                .map(click -> ClickEventResponse.builder()
+                        .id(click.getId())
+                        .clickedAt(click.getClickedAt())
+                        .build());
     }
 }
