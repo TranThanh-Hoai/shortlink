@@ -1,133 +1,99 @@
-# 🔗 ShortLink - High Performance URL Shortener Service
+# Shortlink - Dịch vụ Rút gọn Liên kết (URL Shortener)
 
-[![Java Version](https://img.shields.io/badge/Java-21-blue?style=flat-square&logo=java)](https://www.oracle.com/java/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.x-brightgreen?style=flat-square&logo=springboot)](https://spring.io/projects/spring-boot)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+[![Java Version](https://img.shields.io/badge/Java-21-orange.svg)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**ShortLink** là một giải pháp rút gọn URL (URL Shortener) mạnh mẽ, được tối ưu hóa cho hiệu suất cao, bảo mật và khả năng mở rộng. Dự án được xây dựng nhằm mục đích không chỉ giải quyết các bài toán CRUD cơ bản mà còn áp dụng các kỹ thuật tiên tiến trong phát triển backend hiện đại như **Multi-level Caching**, **Rate Limiting Distributed**, và **System Observability**.
+Shortlink là một ứng dụng backend mạnh mẽ được xây dựng bằng Spring Boot, cung cấp dịch vụ rút gọn URL với các tính năng nâng cao như đặt bí danh tùy chỉnh (custom alias), giới hạn tốc độ (rate limiting), bộ nhớ đệm (caching) và bảo mật bằng JWT.
 
----
+## 🚀 Tính năng chính
 
-## ✨ Tính năng nổi bật
+- **Rút gọn URL**: Chuyển đổi các liên kết dài thành các liên kết ngắn gọn, dễ chia sẻ.
+- **Bí danh tùy chỉnh (Custom Alias)**: Cho phép người dùng tự đặt tên cho các liên kết rút gọn.
+- **Quản lý hết hạn**: Hỗ trợ thiết lập thời gian hết hạn cho các liên kết và tự động dọn dẹp các liên kết đã hết hạn.
+- **Bảo mật JWT**: Hệ thống xác thực và phân quyền người dùng sử dụng JSON Web Token.
+- **Giới hạn tốc độ (Rate Limiting)**: Sử dụng Bucket4j kết hợp với Redis để ngăn chặn việc lạm dụng API.
+- **Bộ nhớ đệm (Caching)**: Tối ưu hóa hiệu năng truy xuất link bằng Redis.
+- **Tài liệu API tự động**: Tích hợp Swagger UI (OpenAPI 3) để dễ dàng thử nghiệm và tích hợp.
+- **Giám sát (Monitoring)**: Hỗ trợ Prometheus và Grafana để theo dõi trạng thái hệ thống.
 
-### 🎯 Tính năng lõi
-- **Rút gọn URL thông minh:** Hỗ trợ mã hóa ngẫu nhiên (base62) hoặc tùy chỉnh bí danh (custom alias).
-- **QR Code Generator:** Tự động tạo mã QR chất lượng cao cho mỗi liên kết rút gọn.
-- **Analytics thời gian thực:** Thu thập thông tin click (Browser, OS, Device, Location) một cách bất đồng bộ (`@Async`).
+## 🛠 Công nghệ sử dụng
 
-### ⚡ Hiệu suất & Độ tin cậy
-- **Multi-level Caching Strategy:**
-    - **L1 Cache (Caffeine):** Tốc độ cực nhanh cho các liên kết hot nhất ngay tại ứng dụng.
-    - **L2 Cache (Redis):** Đồng bộ hóa dữ liệu giữa các instance và cache tập trung.
-- **Idempotency API:** Bảo vệ API tạo link bằng `Idempotency-Key`, ngăn chặn tạo trùng lặp do lỗi mạng hoặc retry.
-- **Fail-safe Design:** Quản lý vòng đời cache thông minh (Invalidation/Repopulation) khi dữ liệu gốc thay đổi.
+- **Ngôn ngữ**: Java 21
+- **Framework chính**: Spring Boot
+- **Cơ sở dữ liệu**: MySQL (Lưu trữ chính), Redis (Caching & Rate Limiting)
+- **Bảo mật**: Spring Security, JWT (jjwt)
+- **Tài liệu API**: Springdoc OpenAPI
+- **Quản lý thư viện**: Maven
+- **Khác**: Lombok, Bucket4j, Docker & Docker Compose
 
-### 🛡️ Bảo mật
-- **Authentication & Authorization:** Hệ thống đăng nhập và phân quyền sử dụng **JWT (JSON Web Token)**.
-- **Ownership Validation:** Đảm bảo người dùng chỉ có thể quản lý (xem, sửa, xóa) các liên kết do chính họ tạo ra.
-- **Distributed Rate Limiting:** Sử dụng **Bucket4j + Redis** để bảo vệ hệ thống khỏi các cuộc tấn công Brute-force và Spam API.
+## 📋 Yêu cầu hệ thống
 
-### 📊 Khả năng quan sát (Observability)
-- **Monitoring Dashboard:** Tích hợp bộ đôi **Prometheus** và **Grafana** để theo dõi sức khỏe hệ thống, throughput và latency.
-- **Custom Metrics:** Theo dõi các chỉ số kinh doanh như tổng số click, tỷ lệ lỗi, và hiệu quả của hệ thống cache.
+- Java 21+
+- Maven 3.6+
+- MySQL 8.0+
+- Redis 7.0+
+- Docker (Tùy chọn)
 
----
+## ⚙️ Cấu hình
 
-## 🛠 Tech Stack
+Trước khi chạy ứng dụng, hãy cập nhật các thông số cấu hình trong file `src/main/resources/application.properties`:
 
-| Category | Technologies |
-| :--- | :--- |
-| **Language** | Java 21 |
-| **Framework** | Spring Boot 3.5.x, Spring Data JPA, Spring Security |
-| **Database** | PostgreSQL |
-| **Caching** | Redis, Caffeine |
-| **Security** | JWT, BCrypt, Bucket4j |
-| **Monitoring** | Spring Actuator, Prometheus, Grafana |
-| **Documentation** | Swagger / OpenAPI 3.0 |
-| **Infrastructure** | Docker, Docker Compose |
+```properties
+# Database configuration
+spring.datasource.url=jdbc:mysql://localhost:3306/shortlink
+spring.datasource.username=your_username
+spring.datasource.password=your_password
 
----
+# Redis configuration
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
 
-## 📂 Cấu trúc thư mục tiêu biểu
-
-```text
-src/main/java/com/hoaitran/shortlink/
-├── config/        # Cấu hình Security, Async, Cache, Swagger...
-├── controller/    # REST API endpoints
-├── dto/           # Data Transfer Objects & Validation
-├── entity/        # JPA Entities (Database Mapping)
-├── exception/     # Global Exception Handling
-├── repository/    # Data Access Layer
-├── service/       # Business Logic Layer
-└── security/      # JWT Filter, Provider & Custom UserDetails
+# JWT configuration
+jwt.secret=your_very_long_secret_key_here
+jwt.expiration=3600000
 ```
 
----
+## 🏃 Hướng dẫn chạy ứng dụng
 
-## 📊 Dashboard & Documentation
+### Chạy bằng Maven
 
-Sau khi chạy dự án, bạn có thể truy cập các địa chỉ sau:
-
-| Dịch vụ | Địa chỉ | Ghi chú |
-| :--- | :--- | :--- |
-| **Swagger UI** | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) | Tài liệu & Test API |
-| **Prometheus** | [http://localhost:9090](http://localhost:9090) | Thu thập Metrics |
-| **Grafana** | [http://localhost:3000](http://localhost:3000) | Dashboard (admin/admin) |
-| **Health Check** | [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) | Trạng thái hệ thống |
-
----
-
-## ⚙️ Hướng dẫn cài đặt
-
-### Yêu cầu hệ thống
-- **Docker & Docker Compose** (Khuyến nghị)
-- **JDK 21** & **Maven 3.9+** (Nếu chạy không qua Docker)
-
-### 1. Triển khai nhanh với Docker
-```bash
-# Clone dự án
-git clone https://github.com/TranThanh-Hoai/shortlink.git
-cd shortlink
-
-# Khởi chạy toàn bộ Services (PostgreSQL, Redis, Prometheus, Grafana, App)
-docker compose up -d --build
-```
-
-### 2. Chạy Local (Manual)
-1. Cấu hình các thông số database trong `src/main/resources/application.yml`.
-2. Chạy ứng dụng:
+1. Clone repository:
    ```bash
-   ./mvnw spring-boot:run
+   git clone https://github.com/TranThanh-Hoai/shortlink.git
+   cd shortlink
    ```
 
----
+2. Build ứng dụng:
+   ```bash
+   mvn clean install
+   ```
 
-## 🧪 Kiểm thử (Testing)
+3. Chạy ứng dụng:
+   ```bash
+   mvn spring-boot:run
+   ```
 
-Dự án chú trọng vào chất lượng mã nguồn với bộ Integration Tests bao phủ các kịch bản quan trọng từ Logic nghiệp vụ đến Bảo mật:
+### Chạy bằng Docker
+
+Ứng dụng đã được cấu hình sẵn Docker Compose bao gồm: App, PostgreSQL (trong compose.yaml), Redis, Prometheus và Grafana.
 
 ```bash
-# Chạy toàn bộ Test suite
-./mvnw test
+docker-compose up -d
 ```
 
----
+> **Lưu ý**: Hiện tại file `compose.yaml` đang sử dụng PostgreSQL làm DB, trong khi `pom.xml` sử dụng MySQL. Bạn có thể cần điều chỉnh để đồng bộ.
 
-## 📈 Roadmap & Định hướng phát triển
+## 📖 Tài liệu API
 
-- [ ] **Database Migration:** Tích hợp Flyway/Liquibase để quản lý phiên bản schema.
-- [ ] **CI/CD Pipeline:** Tự động hóa build, test và deploy qua GitHub Actions.
-- [ ] **Soft Delete:** Triển khai cơ chế xóa mềm kết hợp dọn dẹp dữ liệu định kỳ.
-- [ ] **User Profile:** Bổ sung tính năng quản lý thông tin cá nhân và cài đặt bảo mật cho người dùng.
+Sau khi ứng dụng khởi chạy, bạn có thể truy cập tài liệu API tương tác tại:
 
----
+- **Swagger UI**: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+- **OpenAPI Spec**: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
 
-## 👤 Tác giả
+## 🤝 Đóng góp
 
-**Tran Thanh Hoai**
-- Email: [tthoai654@gmail.com](mailto:tthoai654@gmail.com)
-- GitHub: [@TranThanh-Hoai](https://github.com/TranThanh-Hoai)
+Mọi đóng góp đều được trân trọng! Vui lòng tạo Issue hoặc gửi Pull Request nếu bạn có ý tưởng cải thiện dự án.
 
 ---
-
-⭐ Nếu bạn thấy dự án này hữu ích, hãy tặng một ngôi sao (Star) trên GitHub nhé!
+✨ Phát triển bởi [TranThanh-Hoai](https://github.com/TranThanh-Hoai)

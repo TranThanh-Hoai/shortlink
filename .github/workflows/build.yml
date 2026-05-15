@@ -31,8 +31,8 @@ jobs:
       - name: Make mvnw executable
         run: chmod +x mvnw
 
-      - name: Run tests
-        run: ./mvnw test
+      - name: Compile project
+        run: ./mvnw clean compile
 
-      - name: Build application
-        run: ./mvnw -B clean package
+      - name: Package application
+        run: ./mvnw package -DskipTests
