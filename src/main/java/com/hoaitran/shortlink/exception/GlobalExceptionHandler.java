@@ -11,7 +11,10 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
@@ -39,9 +42,15 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.GONE, "Link Expired", ex.getMessage());
     }
 
+    @ExceptionHandler(LinkNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleLinkNotFoundException(LinkNotFoundException ex) {
+        return buildResponse(HttpStatus.NOT_FOUND, "Link Not Found", ex.getMessage());
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "Runtime Error", ex.getMessage());
+        log.error("Unhandled RuntimeException: ", ex);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", "An unexpected error occurred: " + ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
