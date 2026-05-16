@@ -4,6 +4,7 @@ import com.hoaitran.shortlink.dto.AuthResponse;
 import com.hoaitran.shortlink.dto.LoginRequest;
 import com.hoaitran.shortlink.dto.RegisterRequest;
 import com.hoaitran.shortlink.service.UserService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@Tag(name = "User Management", description = "Endpoints for user registration and authentication")
 public class UserController {
     private final UserService userService;
 

@@ -17,13 +17,12 @@ import java.time.LocalDateTime;
 public class Link {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, length = 2048)
     private String originalUrl;
 
-    @Column(nullable = true, unique = true, length = 10)
+    @Column(nullable = true, unique = true, length = 30)
     private String shortCode;
 
     @CreationTimestamp
