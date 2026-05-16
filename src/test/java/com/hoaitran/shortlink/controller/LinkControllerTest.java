@@ -7,6 +7,7 @@ import com.hoaitran.shortlink.entity.Link;
 import com.hoaitran.shortlink.exception.LinkNotFoundException;
 import com.hoaitran.shortlink.mapper.LinkMapper;
 import com.hoaitran.shortlink.service.LinkService;
+import com.hoaitran.shortlink.service.QrCodeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,7 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -33,6 +34,9 @@ class LinkControllerTest {
 
     @Mock
     private LinkMapper linkMapper;
+
+    @Mock
+    private QrCodeService qrCodeService;
 
     @InjectMocks
     private LinkController linkController;
@@ -63,6 +67,7 @@ class LinkControllerTest {
 
         when(linkService.shortenUrl(any(ShortenRequest.class))).thenReturn(mockLink);
         when(linkMapper.toResponse(any(Link.class))).thenReturn(mockResponse);
+        when(qrCodeService.generateQrCodeBase64(any(), anyInt(), anyInt())).thenReturn("base64qrcode");
 
         mockMvc.perform(post("/api/shorten")
                 .contentType(MediaType.APPLICATION_JSON)
