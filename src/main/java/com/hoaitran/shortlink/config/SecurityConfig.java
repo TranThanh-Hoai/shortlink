@@ -43,7 +43,9 @@ public class SecurityConfig {
                                 "/api/users/register",
                                 "/api/users/login",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/v3/api-docs/**",
+                                "/actuator/**",
+                                "/ping"
                         ).permitAll()
                         .requestMatchers("/{shortCode:[a-zA-Z0-9]+}").permitAll()
                         .anyRequest().authenticated()
