@@ -1,8 +1,10 @@
 package com.hoaitran.shortlink.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hoaitran.shortlink.dto.AuthResponse;
 import com.hoaitran.shortlink.dto.LoginRequest;
 import com.hoaitran.shortlink.dto.RegisterRequest;
+import com.hoaitran.shortlink.entity.Role;
 import com.hoaitran.shortlink.entity.User;
 import com.hoaitran.shortlink.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,45 +43,47 @@ class UserControllerTest {
     }
 
     @Test
-    void register_ShouldReturnUser() throws Exception {
+    void register_ShouldReturnAuthResponse() throws Exception {
         RegisterRequest request = new RegisterRequest();
         request.setUsername("testuser");
         request.setPassword("password");
         request.setEmail("test@example.com");
 
-        User mockUser = User.builder()
-                .id(1L)
+        AuthResponse authResponse = AuthResponse.builder()
+                .accessToken("testToken")
                 .username("testuser")
-                .email("test@example.com")
+                .role(Role.USER)
                 .build();
 
-        when(userService.register(any(RegisterRequest.class))).thenReturn(mockUser);
+        when(userService.register(any(RegisterRequest.class))).thenReturn(authResponse);
 
         mockMvc.perform(post("/api/users/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("testuser"))
-                .andExpect(jsonPath("$.email").value("test@example.com"));
+                .andExpect(jsonPath("$.accessToken").value("testToken"));
     }
 
     @Test
-    void login_ShouldReturnUser() throws Exception {
+    void login_ShouldReturnAuthResponse() throws Exception {
         LoginRequest request = new LoginRequest();
         request.setUsername("testuser");
         request.setPassword("password");
 
-        User mockUser = User.builder()
-                .id(1L)
+        AuthResponse authResponse = AuthResponse.builder()
+                .accessToken("testToken")
                 .username("testuser")
+                .role(Role.USER)
                 .build();
 
-        when(userService.login(any(LoginRequest.class))).thenReturn(mockUser);
+        when(userService.login(any(LoginRequest.class))).thenReturn(authResponse);
 
         mockMvc.perform(post("/api/users/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("testuser"));
+                .andExpect(jsonPath("$.username").value("testuser"))
+                .andExpect(jsonPath("$.accessToken").value("testToken"));
     }
 }
