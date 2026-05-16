@@ -17,4 +17,5 @@ public class LinkResponse {
     private LocalDateTime expiresAt;
     private long clickCount;
     private boolean active;
+    private String qrCode;
 }

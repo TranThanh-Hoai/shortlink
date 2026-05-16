@@ -16,15 +16,18 @@ public class LinkCleanupTask {
 
     private final LinkRepository linkRepository;
 
-    @Scheduled(cron = "0 0 * * * *") // Run every hour
+    /**
+     * Cleans up expired links every hour.
+     */
+    @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void cleanupExpiredLinks() {
-        log.info("Running expired links cleanup task...");
+        log.info("Starting cleanup of expired links...");
         try {
             linkRepository.deleteAllByExpiresAtBefore(LocalDateTime.now());
-            log.info("Successfully cleaned up expired links.");
+            log.info("Cleanup of expired links completed successfully.");
         } catch (Exception e) {
-            log.error("Error occurred while cleaning up expired links", e);
+            log.error("Error occurred during expired links cleanup: ", e);
         }
     }
 }
