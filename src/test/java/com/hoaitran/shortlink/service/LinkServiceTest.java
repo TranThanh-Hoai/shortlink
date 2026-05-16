@@ -56,10 +56,11 @@ class LinkServiceTest {
     @BeforeEach
     void setUp() {
         // valueOperations will be returned for any operations
+        // Mock redis value operations
         lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     }
 
-    @Test
+  @Test
     void testShortenUrl_WithValidAlias_ShouldSucceed() {
         ShortenRequest request = new ShortenRequest();
         request.setUrl("https://example.com");
