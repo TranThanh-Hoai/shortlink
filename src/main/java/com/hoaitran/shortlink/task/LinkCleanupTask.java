@@ -1,5 +1,6 @@
 package com.hoaitran.shortlink.task;
 
+import com.hoaitran.shortlink.repository.ClickEventRepository;
 import com.hoaitran.shortlink.repository.LinkRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 public class LinkCleanupTask {
 
     private final LinkRepository linkRepository;
+    private final ClickEventRepository clickEventRepository;
 
     /**
      * Cleans up expired links every hour.
@@ -24,7 +26,9 @@ public class LinkCleanupTask {
     public void cleanupExpiredLinks() {
         log.info("Starting cleanup of expired links...");
         try {
-            linkRepository.deleteAllByExpiresAtBefore(LocalDateTime.now());
+            LocalDateTime now = LocalDateTime.now();
+            clickEventRepository.deleteByLinkExpiresAtBefore(now);
+            linkRepository.deleteExpiredLinks(now);
             log.info("Cleanup of expired links completed successfully.");
         } catch (Exception e) {
             log.error("Error occurred during expired links cleanup: ", e);

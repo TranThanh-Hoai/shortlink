@@ -16,7 +16,10 @@ import org.springframework.data.repository.query.Param;
 public interface LinkRepository extends JpaRepository<Link, Long> {
     Optional<Link> findByShortCode(String shortCode);
     boolean existsByShortCode(String shortCode);
-    void deleteAllByExpiresAtBefore(LocalDateTime now);
+
+    @Modifying
+    @Query("DELETE FROM Link l WHERE l.expiresAt < :now")
+    void deleteExpiredLinks(@Param("now") LocalDateTime now);
 
     @Modifying
     @Query("UPDATE Link l SET l.clickCount = l.clickCount + 1 WHERE l.id = :id")
