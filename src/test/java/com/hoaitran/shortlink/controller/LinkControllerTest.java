@@ -65,7 +65,7 @@ class LinkControllerTest {
                 .shortCode("alias")
                 .build();
 
-        when(linkService.shortenUrl(any(ShortenRequest.class))).thenReturn(mockLink);
+        when(linkService.shortenUrl(any(ShortenRequest.class), any())).thenReturn(mockLink);
         when(linkMapper.toResponse(any(Link.class))).thenReturn(mockResponse);
         when(qrCodeService.generateQrCodeBase64(any(), anyInt(), anyInt())).thenReturn("base64qrcode");
 

@@ -1,8 +1,8 @@
-    
 package com.hoaitran.shortlink.service;
 
 import com.hoaitran.shortlink.dto.LinkCacheDto;
 import com.hoaitran.shortlink.entity.Link;
+import com.hoaitran.shortlink.entity.User;
 import com.hoaitran.shortlink.mapper.LinkMapper;
 import com.hoaitran.shortlink.repository.LinkRepository;
 import com.hoaitran.shortlink.utils.Base62Utils;
@@ -31,7 +31,6 @@ public class LinkService {
     private final ClickEventService clickEventService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final LinkMapper linkMapper;
-    private final UserService userService;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
     private final ObjectMapper objectMapper;
 
@@ -39,7 +38,7 @@ public class LinkService {
     private static final String CLICK_COUNT_CACHE_KEY = "shortlink:clicks:";
 
     @Transactional
-    public Link shortenUrl(ShortenRequest request) {
+    public Link shortenUrl(ShortenRequest request, User user) {
         String alias = request.getAlias();
         if (alias != null && !alias.isEmpty()) {
             if (!alias.matches("^[a-zA-Z0-9.-]+$")) {
@@ -53,8 +52,8 @@ public class LinkService {
         Link.LinkBuilder linkBuilder = Link.builder()
                 .originalUrl(request.getUrl());
 
-        if (request.getUserId() != null) {
-            userService.findById(request.getUserId()).ifPresent(user -> linkBuilder.user(user));
+        if (user != null) {
+            linkBuilder.user(user);
         }
 
         if (request.getExpiresAt() != null) {
