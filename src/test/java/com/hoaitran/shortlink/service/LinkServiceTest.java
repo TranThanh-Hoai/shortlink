@@ -70,7 +70,7 @@ class LinkServiceTest {
         when(snowflakeIdGenerator.nextId()).thenReturn(12345L);
         when(linkRepository.save(any(Link.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Link savedLink = linkService.shortenUrl(request);
+        Link savedLink = linkService.shortenUrl(request, null);
 
         assertNotNull(savedLink);
         assertEquals("https://example.com", savedLink.getOriginalUrl());
@@ -88,7 +88,7 @@ class LinkServiceTest {
         request.setUrl("https://example.com");
         request.setAlias("invalid alias@!");
 
-        assertThrows(InvalidAliasException.class, () -> linkService.shortenUrl(request));
+        assertThrows(InvalidAliasException.class, () -> linkService.shortenUrl(request, null));
         verify(linkRepository, never()).save(any());
     }
 
@@ -100,7 +100,7 @@ class LinkServiceTest {
 
         when(linkRepository.existsByShortCode("existingalias")).thenReturn(true);
 
-        assertThrows(AliasAlreadyExistsException.class, () -> linkService.shortenUrl(request));
+        assertThrows(AliasAlreadyExistsException.class, () -> linkService.shortenUrl(request, null));
         verify(linkRepository, never()).save(any());
     }
 
@@ -113,13 +113,38 @@ class LinkServiceTest {
         when(snowflakeIdGenerator.nextId()).thenReturn(generatedId);
         when(linkRepository.save(any(Link.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Link savedLink = linkService.shortenUrl(request);
+        Link savedLink = linkService.shortenUrl(request, null);
 
         assertNotNull(savedLink);
         assertEquals(generatedId, savedLink.getId());
         String expectedShortCode = Base62Utils.encode(generatedId);
         assertEquals(expectedShortCode, savedLink.getShortCode());
 
+        verify(linkRepository).save(any(Link.class));
+    }
+
+    @Test
+    void testShortenUrl_WithUser_ShouldAssociateUser() {
+        ShortenRequest request = new ShortenRequest();
+        request.setUrl("https://example.com");
+        request.setAlias("useralias");
+
+        User user = new User();
+        user.setId(999L);
+        user.setUsername("testuser");
+
+        when(linkRepository.existsByShortCode("useralias")).thenReturn(false);
+        when(snowflakeIdGenerator.nextId()).thenReturn(54321L);
+        when(linkRepository.save(any(Link.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Link savedLink = linkService.shortenUrl(request, user);
+
+        assertNotNull(savedLink);
+        assertEquals("https://example.com", savedLink.getOriginalUrl());
+        assertEquals("useralias", savedLink.getShortCode());
+        assertEquals(user, savedLink.getUser());
+
+        verify(linkRepository).existsByShortCode("useralias");
         verify(linkRepository).save(any(Link.class));
     }
 
