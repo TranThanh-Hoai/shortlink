@@ -1,6 +1,8 @@
 package com.hoaitran.shortlink.security;
 
 import com.hoaitran.shortlink.service.JwtService;
+import com.hoaitran.shortlink.entity.User;
+import com.hoaitran.shortlink.entity.Role;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,7 +45,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         username = jwtService.extractUsername(jwt);
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+            Long userId = jwtService.extractUserId(jwt);
+            String email = jwtService.extractEmail(jwt);
+            String roleStr = jwtService.extractRole(jwt);
+
+            UserDetails userDetails;
+            if (userId != null && email != null && roleStr != null) {
+                Role role = Role.valueOf(roleStr);
+                User user = User.builder()
+                        .id(userId)
+                        .username(username)
+                        .email(email)
+                        .role(role)
+                        .build();
+                userDetails = new CustomUserDetails(user);
+            } else {
+                // Fallback to database if claims are missing in older tokens
+                userDetails = this.userDetailsService.loadUserByUsername(username);
+            }
+
             if (jwtService.isTokenValid(jwt, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
@@ -59,3 +79,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
+

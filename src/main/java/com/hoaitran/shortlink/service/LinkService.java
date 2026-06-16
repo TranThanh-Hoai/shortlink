@@ -80,7 +80,6 @@ public class LinkService {
         return link;
     }
 
-    @Transactional
     public String getOriginalUrl(String shortCode) {
         Object cachedValue = redisTemplate.opsForValue().get(URL_CACHE_KEY + shortCode);
         LinkCacheDto cacheDto = null;
@@ -119,10 +118,8 @@ public class LinkService {
             // Atomically increment click count in Redis for tracking
             redisTemplate.opsForValue().increment(CLICK_COUNT_CACHE_KEY + shortCode);
 
-            // Atomically update in DB
-            linkRepository.incrementClickCount(link.getId());
-
-            clickEventService.recordClick(link);
+            // Asynchronously increment click count and record click event in DB
+            clickEventService.recordClickAndIncrementCount(link);
 
             return link.getOriginalUrl();
         }

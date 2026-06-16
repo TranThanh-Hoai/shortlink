@@ -167,8 +167,7 @@ class LinkServiceTest {
 
         assertEquals("https://example.com", result);
         verify(valueOperations).increment("shortlink:clicks:" + shortCode);
-        verify(linkRepository).incrementClickCount(1L);
-        verify(clickEventService).recordClick(mockLink);
+        verify(clickEventService).recordClickAndIncrementCount(mockLink);
     }
 
     @Test
@@ -188,8 +187,7 @@ class LinkServiceTest {
         assertEquals("https://example.com", result);
         verify(valueOperations).set(eq("shortlink:url:" + shortCode), any(), anyLong(), eq(TimeUnit.SECONDS));
         verify(valueOperations).increment("shortlink:clicks:" + shortCode);
-        verify(linkRepository).incrementClickCount(1L);
-        verify(clickEventService).recordClick(mockLink);
+        verify(clickEventService).recordClickAndIncrementCount(mockLink);
     }
 
     @Test

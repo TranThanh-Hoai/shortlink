@@ -4,6 +4,7 @@ import com.hoaitran.shortlink.dto.response.ClickEventResponse;
 import com.hoaitran.shortlink.entity.ClickEvent;
 import com.hoaitran.shortlink.entity.Link;
 import com.hoaitran.shortlink.repository.ClickEventRepository;
+import com.hoaitran.shortlink.repository.LinkRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +30,9 @@ class ClickEventServiceTest {
     @Mock
     private ClickEventRepository clickEventRepository;
 
+    @Mock
+    private LinkRepository linkRepository;
+
     @InjectMocks
     private ClickEventService clickEventService;
 
@@ -39,6 +43,17 @@ class ClickEventServiceTest {
 
         clickEventService.recordClick(mockLink);
 
+        verify(clickEventRepository).save(any(ClickEvent.class));
+    }
+
+    @Test
+    void testRecordClickAndIncrementCount() {
+        Link mockLink = new Link();
+        mockLink.setId(12L);
+
+        clickEventService.recordClickAndIncrementCount(mockLink);
+
+        verify(linkRepository).incrementClickCount(12L);
         verify(clickEventRepository).save(any(ClickEvent.class));
     }
 
