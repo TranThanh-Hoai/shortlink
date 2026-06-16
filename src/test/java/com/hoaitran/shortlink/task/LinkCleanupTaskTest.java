@@ -1,5 +1,6 @@
 package com.hoaitran.shortlink.task;
 
+import com.hoaitran.shortlink.repository.ClickEventRepository;
 import com.hoaitran.shortlink.repository.LinkRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,12 +19,16 @@ class LinkCleanupTaskTest {
     @Mock
     private LinkRepository linkRepository;
 
+    @Mock
+    private ClickEventRepository clickEventRepository;
+
     @InjectMocks
     private LinkCleanupTask linkCleanupTask;
 
     @Test
     void cleanupExpiredLinks_ShouldCallRepositoryDelete() {
         linkCleanupTask.cleanupExpiredLinks();
-        verify(linkRepository).deleteAllByExpiresAtBefore(any(LocalDateTime.class));
+        verify(clickEventRepository).deleteByLinkExpiresAtBefore(any(LocalDateTime.class));
+        verify(linkRepository).deleteExpiredLinks(any(LocalDateTime.class));
     }
 }

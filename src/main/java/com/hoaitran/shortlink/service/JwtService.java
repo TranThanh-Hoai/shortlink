@@ -1,5 +1,8 @@
 package com.hoaitran.shortlink.service;
 
+import com.hoaitran.shortlink.security.CustomUserDetails;
+import com.hoaitran.shortlink.entity.User;
+import com.hoaitran.shortlink.entity.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -27,14 +30,38 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public Long extractUserId(String token) {
+        Object userIdObj = extractClaim(token, claims -> claims.get("userId"));
+        if (userIdObj instanceof Number number) {
+            return number.longValue();
+        }
+        return null;
+    }
+
+    public String extractEmail(String token) {
+        return extractClaim(token, claims -> claims.get("email", String.class));
+    }
+
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+        Map<String, Object> extraClaims = new HashMap<>();
+        if (userDetails instanceof CustomUserDetails customUserDetails) {
+            User user = customUserDetails.getUser();
+            extraClaims.put("userId", user.getId());
+            extraClaims.put("email", user.getEmail());
+            extraClaims.put("role", user.getRole().name());
+        }
+        return generateToken(extraClaims, userDetails);
     }
+
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return buildToken(extraClaims, userDetails, jwtExpiration);
