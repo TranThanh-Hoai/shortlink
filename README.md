@@ -5,7 +5,7 @@
 [![Redis](https://img.shields.io/badge/Redis-7.x-red.svg)](https://redis.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Shortlink is a production-ready, high-performance URL shortening backend service built on **Spring Boot 4.0.6** and **Java 21**. It integrates distributed ID generation (**Snowflake**), high-speed **Redis Caching**, and asynchronous processing to achieve sub-millisecond redirect latencies and high write throughput under heavy load.
+Shortlink is a high-performance URL shortening backend service built on **Spring Boot 4.0.6** and **Java 21**. It integrates distributed ID generation (**Snowflake**), high-speed **Redis Caching**, and asynchronous processing to achieve sub-millisecond redirect latencies and high write throughput under heavy load.
 
 ---
 
